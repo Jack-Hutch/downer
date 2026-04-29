@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Squircle background (macOS-style superellipse approximated with rounded rect) -->
+  <defs>
+    <clipPath id="squircle">
+      <rect x="0" y="0" width="1024" height="1024" rx="224" ry="224"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#squircle)">
+    <rect width="1024" height="1024" fill="#14120f"/>
+
+    <!-- Track ring (faint) -->
+    <circle cx="512" cy="512" r="352" fill="none"
+            stroke="rgba(245,241,232,0.18)" stroke-width="48"/>
+
+    <!-- Progress ring (75% filled, terracotta, rotated -90° to start at 12 o'clock) -->
+    <circle cx="512" cy="512" r="352" fill="none"
+            stroke="#d97757" stroke-width="48" stroke-linecap="round"
+            stroke-dasharray="2211.7" stroke-dashoffset="552.9"
+            transform="rotate(-90 512 512)"/>
+
+    <!-- D mark in center -->
+    <text x="512" y="680" text-anchor="middle"
+          font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', sans-serif"
+          font-weight="700" font-size="380" letter-spacing="-12"
+          fill="#faf8f3">D</text>
+  </g>
+</svg>

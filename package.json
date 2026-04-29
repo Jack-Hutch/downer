@@ -1,6 +1,6 @@
 {
   "name": "downer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "main": "dist-electron/main.js",
   "scripts": {
@@ -16,6 +16,7 @@
   "build": {
     "appId": "com.downer.app",
     "productName": "Downer",
+    "afterPack": "build/afterPack.cjs",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -27,6 +28,7 @@
     ],
     "mac": {
       "category": "public.app-category.productivity",
+      "icon": "build/icon.icns",
       "target": [
         { "target": "dmg", "arch": ["arm64", "x64"] },
         { "target": "zip", "arch": ["arm64", "x64"] }

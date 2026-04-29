@@ -1,5 +1,6 @@
 import { useStore } from '../store/store';
 import { Icon } from './primitives';
+import { BrandMark } from './BrandMark';
 
 export function Sidebar() {
   const { view, setView, events, categories, settings, setSettings } = useStore();
@@ -26,7 +27,7 @@ export function Sidebar() {
       <div className="h-[38px] titlebar-drag" />
 
       <div className="px-[18px] pt-1.5 pb-3.5 flex items-center gap-2.5 no-drag">
-        <div className="w-[22px] h-[22px] rounded-md bg-fg text-bg flex items-center justify-center font-mono font-semibold text-[11px]">D</div>
+        <BrandMark size={22} accent={settings.accent} />
         <div className="text-[13.5px] font-semibold tracking-[-0.01em]">Downer</div>
       </div>
 

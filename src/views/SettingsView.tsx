@@ -1,6 +1,7 @@
 import { useStore } from '../store/store';
 import { TopBar } from '../components/TopBar';
 import { Seg, Toggle } from '../components/primitives';
+import { BrandMark } from '../components/BrandMark';
 
 export function SettingsView() {
   const { settings, setSettings } = useStore();
@@ -74,10 +75,10 @@ export function SettingsView() {
 
         <Section title="About">
           <div className="flex items-center gap-3.5 py-2">
-            <div className="w-11 h-11 rounded-[11px] bg-fg text-bg flex items-center justify-center font-mono font-semibold text-[20px]">D</div>
+            <BrandMark size={44} accent={settings.accent} />
             <div>
               <div className="text-[13px] font-semibold text-fg">Downer</div>
-              <div className="text-[11.5px] text-fg-sub">Version 1.4.2 · macOS 14+</div>
+              <div className="text-[11.5px] text-fg-sub">Version 0.1.1 · macOS 11+</div>
             </div>
           </div>
         </Section>
