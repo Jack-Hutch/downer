@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 250 248 243;
+  --surface: 255 255 255;
+  --surface-solid: 255 255 255;
+  --border: 20 18 15;
+  --border-strong: 20 18 15;
+  --fg: 20 18 15;
+  --accent: #d97757;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --font-serif: 'New York', 'Iowan Old Style', 'Apple Garamond', Georgia, serif;
+}
+
+.dark {
+  --bg: 21 20 15;
+  --surface: 255 255 255;
+  --surface-solid: 28 26 21;
+  --border: 255 255 255;
+  --border-strong: 255 255 255;
+  --fg: 245 241 232;
+}
+
+html, body, #root {
+  margin: 0;
+  height: 100%;
+  font-family: var(--font-sans);
+  background: rgb(var(--bg));
+  color: rgb(var(--fg));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* { box-sizing: border-box; }
+
+button { font-family: inherit; }
+
+@keyframes flipTop { from { transform: rotateX(0); } to { transform: rotateX(-90deg); } }
+@keyframes flipBot { from { transform: rotateX(90deg); } to { transform: rotateX(0); } }
+
+input[type="date"], input[type="time"] {
+  font-family: inherit;
+  color: inherit;
+  background: transparent;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgb(var(--fg) / 0.15); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--fg) / 0.3); border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.titlebar-drag { -webkit-app-region: drag; }
+.no-drag { -webkit-app-region: no-drag; }
