@@ -75,6 +75,7 @@ declare global {
       setWindowSize: (payload: { width: number; height: number }) => Promise<void>;
       broadcastStore: (snapshot: unknown) => void;
       onStoreSnapshot: (cb: (s: any) => void) => void;
+      notifyWidgetReady: () => void;
       onWidgetClosed: (cb: (id: string) => void) => void;
     };
   }

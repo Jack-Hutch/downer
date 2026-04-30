@@ -138,7 +138,7 @@ export function SettingsView() {
             <BrandMark size={44} accent={settings.accent} />
             <div>
               <div className="text-[13px] font-semibold text-fg">Downer</div>
-              <div className="text-[11.5px] text-fg-sub">Version 0.1.3 · macOS 11+</div>
+              <div className="text-[11.5px] text-fg-sub">Version 0.1.4 · macOS 11+</div>
             </div>
           </div>
         </Section>

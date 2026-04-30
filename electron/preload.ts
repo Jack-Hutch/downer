@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('downer', {
   onStoreSnapshot: (cb: (snapshot: any) => void) => {
     ipcRenderer.on('store:snapshot', (_e, s) => cb(s));
   },
+  notifyWidgetReady: () => ipcRenderer.send('widget:ready'),
   onWidgetClosed: (cb: (eventId: string) => void) => {
     ipcRenderer.on('widget-closed', (_e, id) => cb(id));
   },

@@ -16,29 +16,42 @@ interface Snapshot {
 function WidgetApp() {
   const params = new URLSearchParams(window.location.search);
   const eventId = params.get('eventId') || '';
-  const [snap, setSnap] = useState<Snapshot | null>(null);
-
-  useEffect(() => {
-    window.downer?.onStoreSnapshot((s) => setSnap(s));
-  }, []);
-
-  // Read the widget's display mode from the URL the main process loaded us with.
   const mode = (params.get('mode') as 'float' | 'desktop') || 'desktop';
   const isDesktop = mode === 'desktop';
 
-  if (!snap) return null;
+  const [snap, setSnap] = useState<Snapshot | null>(null);
+
+  useEffect(() => {
+    // Subscribe to store updates from the main app.
+    window.downer?.onStoreSnapshot((s) => setSnap(s));
+    // Tell main we're loaded so it can push the latest cached snapshot directly,
+    // without us having to wait for the next state-change broadcast.
+    window.downer?.notifyWidgetReady();
+  }, []);
+
+  // ── Render guards ──────────────────────────────────────────────────────
+  // These fall back to a visible placeholder rather than `return null`, so
+  // a widget always SHOWS something on screen — even before data arrives or
+  // if the event was deleted while the widget was open.
+
+  if (!snap) {
+    return <Shell isDesktop={isDesktop} bg="#1c1a15" fg="#f5f1e8" message="Starting…" />;
+  }
   const event = snap.events.find(e => e.id === eventId);
-  if (!event) return null;
+  if (!event) {
+    return <Shell isDesktop={isDesktop} bg="#1c1a15" fg="#f5f1e8" message="Event removed" />;
+  }
+
   const cfg = snap.widgets[eventId] || { size: 'medium' as const, mode: 'desktop' as const };
   const ct = themeById(event.theme);
   const widgetStyle = cfg.style || event.style;
 
   const styleScale: Record<string, Record<string, number>> = {
-    large: { small: 0.62, medium: 0.85, large: 1.05 },
+    large:   { small: 0.62, medium: 0.85, large: 1.05 },
     digital: { small: 0.30, medium: 0.45, large: 0.58 },
-    ring: { small: 0.45, medium: 0.62, large: 0.80 },
-    dots: { small: 0.50, medium: 0.72, large: 0.90 },
-    flip: { small: 0.28, medium: 0.42, large: 0.55 },
+    ring:    { small: 0.45, medium: 0.62, large: 0.80 },
+    dots:    { small: 0.50, medium: 0.72, large: 0.90 },
+    flip:    { small: 0.28, medium: 0.42, large: 0.55 },
   };
   const scale = (styleScale[widgetStyle] || styleScale.large)[cfg.size];
 
@@ -66,6 +79,7 @@ function WidgetApp() {
               onClick={() => window.downer?.closeWidget(eventId)}
               className="w-2.5 h-2.5 rounded-full"
               style={{ background: '#ff736a' }}
+              aria-label="Close widget"
             />
             <span className="w-2.5 h-2.5 rounded-full" style={{ background: ct.dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)' }} />
             <span className="w-2.5 h-2.5 rounded-full" style={{ background: ct.dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)' }} />
@@ -82,6 +96,23 @@ function WidgetApp() {
           {fmtRelative(new Date(event.target))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function Shell({ isDesktop, bg, fg, message }: { isDesktop: boolean; bg: string; fg: string; message: string }) {
+  return (
+    <div
+      className="absolute inset-0 rounded-[14px] overflow-hidden flex items-center justify-center"
+      style={{
+        background: bg,
+        color: fg,
+        boxShadow: isDesktop
+          ? '0 4px 16px rgba(0,0,0,0.18)'
+          : '0 12px 32px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.15)',
+      }}
+    >
+      <div className="text-[10px] uppercase tracking-[0.2em] font-semibold opacity-50">{message}</div>
     </div>
   );
 }

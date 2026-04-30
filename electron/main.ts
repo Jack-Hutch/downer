@@ -7,6 +7,13 @@ const isDev = !!DEV_URL;
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 const widgetWindows = new Map<string, BrowserWindow>();
+// Tracks the current mode of each widget window so we know when a mode change
+// requires tearing down and recreating the window (window type is immutable).
+const widgetModes = new Map<string, WidgetMode>();
+// IDs of widgets currently being recreated for a mode switch — suppresses the
+// spurious 'widget-closed' IPC that would incorrectly tell the renderer the
+// widget was dismissed by the user.
+const recreatingWidgets = new Set<string>();
 
 function loadRoute(win: BrowserWindow, page: 'index' | 'widget', search = '') {
   if (isDev) {
@@ -45,75 +52,116 @@ type WidgetMode = 'float' | 'desktop';
 
 function applyWidgetMode(win: BrowserWindow, mode: WidgetMode) {
   if (mode === 'float') {
-    // Pinned ABOVE all other windows (classic widget behavior).
+    // Pinned ABOVE all other windows (classic always-on-top widget).
     win.setAlwaysOnTop(true, 'floating');
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     win.setIgnoreMouseEvents(false);
     win.setFocusable(true);
   } else {
-    // "Big Day Countdown" mode — sits ON the desktop, BEHIND all app windows.
-    // Three things make this work on macOS:
-    //   1. setAlwaysOnTop(true, 'desktop') — pins to the macOS desktop window level.
-    //      The 'desktop' level isn't in Electron's typed list but it's accepted at
-    //      runtime and maps to NSWindow's kCGDesktopWindowLevel-equivalent.
-    //   2. setIgnoreMouseEvents(true, { forward: true }) — clicks pass through to
-    //      whatever's underneath, just like a wallpaper element.
-    //   3. setFocusable(false) — the widget never steals focus from your real apps.
-    try {
-      // @ts-expect-error 'desktop' is a valid runtime level on macOS even if not typed
-      win.setAlwaysOnTop(true, 'desktop');
-    } catch {
-      win.setAlwaysOnTop(false);
-    }
+    // Desktop mode — appears on the wallpaper layer behind your app windows.
+    //
+    // We deliberately do NOT use `type: 'desktop'` here: in Electron that maps to
+    // `kCGDesktopWindowLevel - 1`, which is BELOW the macOS wallpaper, making the
+    // window invisible. Without a native module we can't get true "between wallpaper
+    // and apps" desktop level, so we approximate with:
+    //   • alwaysOnTop: false  → never pinned above other apps
+    //   • focusable: false    → never gets focus, so clicking other apps doesn't pull
+    //                           the widget forward; the widget stays put in z-order.
+    //   • visibleOnAllWorkspaces → travels with you across macOS Spaces
+    // The widget appears on the desktop, drops behind whatever you're working in,
+    // and re-appears when you minimize / Show Desktop.
+    win.setAlwaysOnTop(false);
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     win.setIgnoreMouseEvents(true, { forward: true });
     win.setFocusable(false);
   }
 }
 
-function createWidgetWindow(eventId: string, size: 'small' | 'medium' | 'large', mode: WidgetMode = 'desktop') {
+function createWidgetWindow(
+  eventId: string,
+  size: 'small' | 'medium' | 'large',
+  mode: WidgetMode = 'desktop',
+  position?: { x: number; y: number },
+) {
   if (widgetWindows.has(eventId)) {
     const existing = widgetWindows.get(eventId)!;
-    applyWidgetMode(existing, mode);
-    if (mode === 'float') existing.focus();
-    return;
+    const existingMode = widgetModes.get(eventId);
+
+    if (existingMode === mode) {
+      // Same mode — nothing structural to change; just surface the window if floating.
+      if (mode === 'float') existing.focus();
+      return;
+    }
+
+    // Mode has changed.  Because BrowserWindow type:'desktop' is set at construction
+    // and cannot be mutated, we must tear down the old window and build a fresh one.
+    // Save the current on-screen position so the new window appears in the same spot.
+    const [cx, cy] = existing.getPosition();
+    position = position ?? { x: cx, y: cy };
+
+    // Mark as recreating so the 'closed' handler below doesn't send a false
+    // 'widget-closed' IPC that would make the renderer think the user dismissed it.
+    recreatingWidgets.add(eventId);
+    existing.destroy();
+    // widgetWindows / widgetModes are cleaned up synchronously inside the 'closed' handler.
   }
+
   const dims = {
-    small: { width: 220, height: 130 },
+    small:  { width: 220, height: 130 },
     medium: { width: 280, height: 170 },
-    large: { width: 340, height: 210 },
+    large:  { width: 340, height: 210 },
   }[size];
 
   const display = screen.getPrimaryDisplay().workArea;
-  const offset = widgetWindows.size * 24;
+  const offset  = widgetWindows.size * 24;
 
-  const win = new BrowserWindow({
-    width: dims.width,
-    height: dims.height,
-    x: display.x + display.width - dims.width - 40 - offset,
-    y: display.y + 40 + offset,
-    frame: false,
-    transparent: true,
-    alwaysOnTop: mode === 'float',
-    focusable: mode === 'float',
-    resizable: false,
-    skipTaskbar: true,
-    hasShadow: true,
+  const x = position?.x ?? (display.x + display.width  - dims.width  - 40 - offset);
+  const y = position?.y ?? (display.y + 40 + offset);
+
+  // Build the option bag.  For desktop mode we pass type:'desktop' which instructs
+  // Electron (on macOS) to set kCGDesktopWindowLevel and the collection-behaviour
+  // flags that keep the window behind every app window and visible on all Spaces.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const winOpts: Record<string, any> = {
+    width:        dims.width,
+    height:       dims.height,
+    x,
+    y,
+    frame:        false,
+    transparent:  true,
+    alwaysOnTop:  mode === 'float',
+    focusable:    mode === 'float',
+    resizable:    false,
+    skipTaskbar:  true,
+    hasShadow:    mode === 'float', // desktop widgets: CSS handles the shadow
     backgroundColor: '#00000000',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
+      preload:             path.join(__dirname, 'preload.js'),
+      contextIsolation:    true,
+      nodeIntegration:     false,
       additionalArguments: [`--widget-mode=${mode}`],
     },
-  });
+  };
+
+  // NOTE: Don't set winOpts.type = 'desktop' — see applyWidgetMode comment.
+  // It hides the window beneath the wallpaper.
+
+  const win = new BrowserWindow(winOpts);
 
   applyWidgetMode(win, mode);
   loadRoute(win, 'widget', `?eventId=${encodeURIComponent(eventId)}&mode=${mode}`);
   widgetWindows.set(eventId, win);
+  widgetModes.set(eventId, mode);
+
   win.on('closed', () => {
     widgetWindows.delete(eventId);
-    mainWindow?.webContents.send('widget-closed', eventId);
+    widgetModes.delete(eventId);
+    if (recreatingWidgets.has(eventId)) {
+      // Window was destroyed as part of a mode switch — not a user dismissal.
+      recreatingWidgets.delete(eventId);
+    } else {
+      mainWindow?.webContents.send('widget-closed', eventId);
+    }
   });
 }
 
@@ -161,27 +209,49 @@ ipcMain.handle('window:setSize', (_e, payload: { width: number; height: number }
 ipcMain.handle('widget:update', (_e, payload: { eventId: string; size?: 'small'|'medium'|'large'; mode?: WidgetMode }) => {
   const win = widgetWindows.get(payload.eventId);
   if (!win) return;
+
+  const currentMode = widgetModes.get(payload.eventId) ?? 'desktop';
+  const newMode     = payload.mode ?? currentMode;
+
+  if (payload.mode && payload.mode !== currentMode) {
+    // Mode switch: BrowserWindow type can't be changed at runtime, so we need to
+    // recreate the window.  Derive the target size from the payload or the current
+    // window dimensions so the new window matches what the user selected.
+    const [w]      = win.getSize();
+    const sizeKey: 'small' | 'medium' | 'large' =
+      payload.size ?? (w <= 220 ? 'small' : w <= 280 ? 'medium' : 'large');
+    createWidgetWindow(payload.eventId, sizeKey, newMode);
+    return; // createWidgetWindow handles position preservation and cleanup
+  }
+
+  // Same mode — just resize if requested.
   if (payload.size) {
     const d = { small: { w: 220, h: 130 }, medium: { w: 280, h: 170 }, large: { w: 340, h: 210 } }[payload.size];
     win.setSize(d.w, d.h);
   }
-  if (payload.mode) {
-    applyWidgetMode(win, payload.mode);
+});
+
+// Cache the latest store snapshot in main so newly-created widget windows can
+// pull it on mount instead of racing the next state-change broadcast.
+let latestSnapshot: unknown = null;
+
+// Broadcast store updates from main renderer to all widgets, AND cache.
+ipcMain.on('store:broadcast', (_e, snapshot) => {
+  latestSnapshot = snapshot;
+  for (const w of widgetWindows.values()) {
+    if (!w.isDestroyed() && !w.webContents.isDestroyed()) {
+      w.webContents.send('store:snapshot', snapshot);
+    }
   }
 });
 
-// Widget renderer pulls store data via IPC
-ipcMain.handle('store:get', () => {
-  return new Promise(resolve => {
-    if (!mainWindow) return resolve(null);
-    mainWindow.webContents.send('store:request');
-    ipcMain.once('store:reply', (_e, data) => resolve(data));
-  });
-});
-
-// Broadcast store updates from main renderer to all widgets
-ipcMain.on('store:broadcast', (_e, snapshot) => {
-  for (const w of widgetWindows.values()) w.webContents.send('store:snapshot', snapshot);
+// Widget windows call this on mount to ask for the latest snapshot directly,
+// avoiding the race where the broadcast happens before the new widget's webContents
+// has finished loading and registered its IPC listener.
+ipcMain.on('widget:ready', (e) => {
+  if (latestSnapshot) {
+    e.sender.send('store:snapshot', latestSnapshot);
+  }
 });
 
 app.whenReady().then(() => {
