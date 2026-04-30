@@ -40,7 +40,15 @@ export interface Settings {
   alwaysOnTop: boolean;
   menuBar: boolean;
   launchAtLogin: boolean;
+  windowSize: 'small' | 'medium' | 'large' | 'custom';
+  customWindowSize: { width: number; height: number };
 }
+
+export const WINDOW_PRESETS = {
+  small:  { width: 1024, height: 700 },
+  medium: { width: 1280, height: 820 },
+  large:  { width: 1600, height: 1000 },
+} as const;
 
 export type ViewState =
   | { name: 'dashboard' }
@@ -60,6 +68,7 @@ declare global {
       openWidget: (id: string, size: WidgetSize, alwaysOnTop: boolean) => Promise<void>;
       closeWidget: (id: string) => Promise<void>;
       updateWidget: (id: string, payload: { size?: WidgetSize; alwaysOnTop?: boolean }) => Promise<void>;
+      setWindowSize: (payload: { width: number; height: number }) => Promise<void>;
       broadcastStore: (snapshot: unknown) => void;
       onStoreSnapshot: (cb: (s: any) => void) => void;
       onWidgetClosed: (cb: (id: string) => void) => void;

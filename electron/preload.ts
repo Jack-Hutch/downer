@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld('downer', {
   updateWidget: (eventId: string, payload: { size?: 'small'|'medium'|'large'; alwaysOnTop?: boolean }) =>
     ipcRenderer.invoke('widget:update', { eventId, ...payload }),
 
+  setWindowSize: (payload: { width: number; height: number }) =>
+    ipcRenderer.invoke('window:setSize', payload),
+
   broadcastStore: (snapshot: unknown) => ipcRenderer.send('store:broadcast', snapshot),
   onStoreSnapshot: (cb: (snapshot: any) => void) => {
     ipcRenderer.on('store:snapshot', (_e, s) => cb(s));

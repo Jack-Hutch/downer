@@ -115,6 +115,15 @@ ipcMain.handle('widget:open', (_e, payload: { eventId: string; size: 'small'|'me
 ipcMain.handle('widget:close', (_e, eventId: string) => {
   widgetWindows.get(eventId)?.close();
 });
+ipcMain.handle('window:setSize', (_e, payload: { width: number; height: number }) => {
+  if (!mainWindow) return;
+  // Clamp to sane bounds.
+  const w = Math.max(800, Math.min(3840, Math.round(payload.width)));
+  const h = Math.max(600, Math.min(2400, Math.round(payload.height)));
+  mainWindow.setSize(w, h, true /* animate */);
+  mainWindow.center();
+});
+
 ipcMain.handle('widget:update', (_e, payload: { eventId: string; size?: 'small'|'medium'|'large'; alwaysOnTop?: boolean }) => {
   const win = widgetWindows.get(payload.eventId);
   if (!win) return;

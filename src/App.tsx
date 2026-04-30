@@ -7,6 +7,7 @@ import { CreateEditView } from './views/CreateEditView';
 import { SettingsView } from './views/SettingsView';
 import { CategoriesView } from './views/CategoriesView';
 import { WidgetsView } from './views/WidgetsView';
+import { WINDOW_PRESETS } from './types';
 
 export default function App() {
   const { view, settings } = useStore();
@@ -43,6 +44,14 @@ export default function App() {
       delete widgets[id];
       useStore.setState({ widgets });
     });
+  }, []);
+
+  // Restore the saved main-window size on app start (one-shot).
+  useEffect(() => {
+    const s = useStore.getState().settings;
+    const dims = s.windowSize === 'custom' ? s.customWindowSize : WINDOW_PRESETS[s.windowSize];
+    window.downer?.setWindowSize(dims);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const renderView = () => {

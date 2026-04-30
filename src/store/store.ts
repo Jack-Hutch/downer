@@ -53,6 +53,8 @@ const DEFAULT_SETTINGS: Settings = {
   alwaysOnTop: true,
   menuBar: true,
   launchAtLogin: false,
+  windowSize: 'medium',
+  customWindowSize: { width: 1280, height: 820 },
 };
 
 interface State {

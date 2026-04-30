@@ -1,7 +1,8 @@
 import { useStore } from '../store/store';
 import { TopBar } from '../components/TopBar';
-import { Seg, Toggle } from '../components/primitives';
+import { Seg, Toggle, Btn } from '../components/primitives';
 import { BrandMark } from '../components/BrandMark';
+import { WINDOW_PRESETS } from '../types';
 
 export function SettingsView() {
   const { settings, setSettings } = useStore();
@@ -64,6 +65,65 @@ export function SettingsView() {
             control={<Toggle value={settings.dailySummary} onChange={v => setSettings({ dailySummary: v })} />} />
         </Section>
 
+        <Section title="Window size" desc="Resize the main Downer window. Drag the corner anytime to fine-tune.">
+          <Row label="Preset"
+            control={
+              <Seg
+                value={settings.windowSize}
+                onChange={v => {
+                  const next = v as typeof settings.windowSize;
+                  setSettings({ windowSize: next });
+                  if (next !== 'custom') {
+                    const p = WINDOW_PRESETS[next];
+                    window.downer?.setWindowSize(p);
+                  } else {
+                    window.downer?.setWindowSize(settings.customWindowSize);
+                  }
+                }}
+                options={[
+                  { v: 'small',  l: 'Small' },
+                  { v: 'medium', l: 'Medium' },
+                  { v: 'large',  l: 'Large' },
+                  { v: 'custom', l: 'Custom' },
+                ]}
+              />
+            }
+          />
+          {settings.windowSize !== 'custom' && (
+            <div className="text-[11.5px] text-fg-sub mt-2 mb-2 tabular-nums">
+              {WINDOW_PRESETS[settings.windowSize].width} × {WINDOW_PRESETS[settings.windowSize].height} px
+            </div>
+          )}
+          {settings.windowSize === 'custom' && (
+            <Row label="Custom dimensions" desc="Width and height in pixels. Min 800 × 600, max 3840 × 2400."
+              control={
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number" min={800} max={3840} step={10}
+                    value={settings.customWindowSize.width}
+                    onChange={e => {
+                      const w = Math.max(800, Math.min(3840, Number(e.target.value) || 1280));
+                      setSettings({ customWindowSize: { ...settings.customWindowSize, width: w } });
+                    }}
+                    className="w-20 h-8 px-2 rounded-md border-[0.5px] border-fg/10 bg-surface text-fg text-[13px] tabular-nums outline-none focus:border-fg/40"
+                  />
+                  <span className="text-fg-sub text-[12px]">×</span>
+                  <input
+                    type="number" min={600} max={2400} step={10}
+                    value={settings.customWindowSize.height}
+                    onChange={e => {
+                      const h = Math.max(600, Math.min(2400, Number(e.target.value) || 820));
+                      setSettings({ customWindowSize: { ...settings.customWindowSize, height: h } });
+                    }}
+                    className="w-20 h-8 px-2 rounded-md border-[0.5px] border-fg/10 bg-surface text-fg text-[13px] tabular-nums outline-none focus:border-fg/40"
+                  />
+                  <Btn size="sm" onClick={() => window.downer?.setWindowSize(settings.customWindowSize)}>Apply</Btn>
+                </div>
+              }
+            />
+          )}
+        </Section>
+
         <Section title="Widgets & desktop" desc="Floating, always-on-top countdowns.">
           <Row label="Always on top" desc="Pin widgets above other apps."
             control={<Toggle value={settings.alwaysOnTop} onChange={v => setSettings({ alwaysOnTop: v })} />} />
@@ -78,7 +138,7 @@ export function SettingsView() {
             <BrandMark size={44} accent={settings.accent} />
             <div>
               <div className="text-[13px] font-semibold text-fg">Downer</div>
-              <div className="text-[11.5px] text-fg-sub">Version 0.1.1 · macOS 11+</div>
+              <div className="text-[11.5px] text-fg-sub">Version 0.1.2 · macOS 11+</div>
             </div>
           </div>
         </Section>
