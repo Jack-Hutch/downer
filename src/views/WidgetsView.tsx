@@ -42,18 +42,27 @@ export function WidgetsView() {
                       >{s.l}</button>
                     ))}
                   </div>
-                  <div className="flex items-center justify-between text-[11.5px] text-fg-mid">
-                    <span>Always on top</span>
-                    <button
-                      onClick={() => updateWidget(ev.id, { alwaysOnTop: !cfg.alwaysOnTop })}
-                      className="relative w-8 h-[18px] rounded-full"
-                      style={{ background: cfg.alwaysOnTop ? '#34c759' : 'rgb(var(--fg) / 0.08)' }}
-                    >
-                      <span
-                        className="absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-[left]"
-                        style={{ left: cfg.alwaysOnTop ? 16 : 2 }}
-                      />
-                    </button>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-fg-sub">Display mode</span>
+                    <div className="flex p-0.5 bg-hover rounded-md">
+                      {[
+                        { v: 'desktop' as const, l: 'On desktop' },
+                        { v: 'float' as const,   l: 'Float above' },
+                      ].map(o => (
+                        <button
+                          key={o.v}
+                          onClick={() => updateWidget(ev.id, { mode: o.v })}
+                          className={`flex-1 h-[24px] text-[11.5px] font-medium rounded transition ${
+                            cfg.mode === o.v ? 'bg-surface text-fg shadow-[0_1px_2px_rgba(0,0,0,0.06)]' : 'text-fg-mid'
+                          }`}
+                        >{o.l}</button>
+                      ))}
+                    </div>
+                    <span className="text-[10.5px] text-fg-sub leading-snug">
+                      {cfg.mode === 'desktop'
+                        ? 'Sits behind app windows on your wallpaper. Click-through.'
+                        : 'Always on top of every other window.'}
+                    </span>
                   </div>
                   <button
                     onClick={() => toggleWidget(ev.id, false)}

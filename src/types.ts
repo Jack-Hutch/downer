@@ -19,9 +19,13 @@ export interface DownerEvent {
   widget?: boolean;
 }
 
+export type WidgetMode = 'float' | 'desktop';
+
 export interface WidgetConfig {
   size: WidgetSize;
-  alwaysOnTop: boolean;
+  mode: WidgetMode;
+  /** @deprecated kept for migration from earlier versions; replaced by `mode`. */
+  alwaysOnTop?: boolean;
   style?: CountdownStyle;
 }
 
@@ -65,9 +69,9 @@ export type ViewState =
 declare global {
   interface Window {
     downer?: {
-      openWidget: (id: string, size: WidgetSize, alwaysOnTop: boolean) => Promise<void>;
+      openWidget: (id: string, size: WidgetSize, mode: WidgetMode) => Promise<void>;
       closeWidget: (id: string) => Promise<void>;
-      updateWidget: (id: string, payload: { size?: WidgetSize; alwaysOnTop?: boolean }) => Promise<void>;
+      updateWidget: (id: string, payload: { size?: WidgetSize; mode?: WidgetMode }) => Promise<void>;
       setWindowSize: (payload: { width: number; height: number }) => Promise<void>;
       broadcastStore: (snapshot: unknown) => void;
       onStoreSnapshot: (cb: (s: any) => void) => void;

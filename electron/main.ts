@@ -41,9 +41,41 @@ function createMainWindow() {
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
-function createWidgetWindow(eventId: string, size: 'small' | 'medium' | 'large', alwaysOnTop: boolean) {
+type WidgetMode = 'float' | 'desktop';
+
+function applyWidgetMode(win: BrowserWindow, mode: WidgetMode) {
+  if (mode === 'float') {
+    // Pinned ABOVE all other windows (classic widget behavior).
+    win.setAlwaysOnTop(true, 'floating');
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    win.setIgnoreMouseEvents(false);
+    win.setFocusable(true);
+  } else {
+    // "Big Day Countdown" mode — sits ON the desktop, BEHIND all app windows.
+    // Three things make this work on macOS:
+    //   1. setAlwaysOnTop(true, 'desktop') — pins to the macOS desktop window level.
+    //      The 'desktop' level isn't in Electron's typed list but it's accepted at
+    //      runtime and maps to NSWindow's kCGDesktopWindowLevel-equivalent.
+    //   2. setIgnoreMouseEvents(true, { forward: true }) — clicks pass through to
+    //      whatever's underneath, just like a wallpaper element.
+    //   3. setFocusable(false) — the widget never steals focus from your real apps.
+    try {
+      // @ts-expect-error 'desktop' is a valid runtime level on macOS even if not typed
+      win.setAlwaysOnTop(true, 'desktop');
+    } catch {
+      win.setAlwaysOnTop(false);
+    }
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    win.setIgnoreMouseEvents(true, { forward: true });
+    win.setFocusable(false);
+  }
+}
+
+function createWidgetWindow(eventId: string, size: 'small' | 'medium' | 'large', mode: WidgetMode = 'desktop') {
   if (widgetWindows.has(eventId)) {
-    widgetWindows.get(eventId)?.focus();
+    const existing = widgetWindows.get(eventId)!;
+    applyWidgetMode(existing, mode);
+    if (mode === 'float') existing.focus();
     return;
   }
   const dims = {
@@ -62,7 +94,8 @@ function createWidgetWindow(eventId: string, size: 'small' | 'medium' | 'large',
     y: display.y + 40 + offset,
     frame: false,
     transparent: true,
-    alwaysOnTop,
+    alwaysOnTop: mode === 'float',
+    focusable: mode === 'float',
     resizable: false,
     skipTaskbar: true,
     hasShadow: true,
@@ -71,11 +104,12 @@ function createWidgetWindow(eventId: string, size: 'small' | 'medium' | 'large',
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      additionalArguments: [`--widget-mode=${mode}`],
     },
   });
 
-  if (alwaysOnTop) win.setAlwaysOnTop(true, 'floating');
-  loadRoute(win, 'widget', `?eventId=${encodeURIComponent(eventId)}`);
+  applyWidgetMode(win, mode);
+  loadRoute(win, 'widget', `?eventId=${encodeURIComponent(eventId)}&mode=${mode}`);
   widgetWindows.set(eventId, win);
   win.on('closed', () => {
     widgetWindows.delete(eventId);
@@ -109,8 +143,8 @@ function createTray() {
   });
 }
 
-ipcMain.handle('widget:open', (_e, payload: { eventId: string; size: 'small'|'medium'|'large'; alwaysOnTop: boolean }) => {
-  createWidgetWindow(payload.eventId, payload.size, payload.alwaysOnTop);
+ipcMain.handle('widget:open', (_e, payload: { eventId: string; size: 'small'|'medium'|'large'; mode: WidgetMode }) => {
+  createWidgetWindow(payload.eventId, payload.size, payload.mode);
 });
 ipcMain.handle('widget:close', (_e, eventId: string) => {
   widgetWindows.get(eventId)?.close();
@@ -124,15 +158,15 @@ ipcMain.handle('window:setSize', (_e, payload: { width: number; height: number }
   mainWindow.center();
 });
 
-ipcMain.handle('widget:update', (_e, payload: { eventId: string; size?: 'small'|'medium'|'large'; alwaysOnTop?: boolean }) => {
+ipcMain.handle('widget:update', (_e, payload: { eventId: string; size?: 'small'|'medium'|'large'; mode?: WidgetMode }) => {
   const win = widgetWindows.get(payload.eventId);
   if (!win) return;
   if (payload.size) {
     const d = { small: { w: 220, h: 130 }, medium: { w: 280, h: 170 }, large: { w: 340, h: 210 } }[payload.size];
     win.setSize(d.w, d.h);
   }
-  if (typeof payload.alwaysOnTop === 'boolean') {
-    win.setAlwaysOnTop(payload.alwaysOnTop, payload.alwaysOnTop ? 'floating' : 'normal');
+  if (payload.mode) {
+    applyWidgetMode(win, payload.mode);
   }
 });
 

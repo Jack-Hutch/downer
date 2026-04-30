@@ -169,9 +169,9 @@ export const useStore = create<State>()(
       toggleWidget: (id, on) => {
         const widgets = { ...get().widgets };
         if (on) {
-          widgets[id] = widgets[id] || { size: 'medium', alwaysOnTop: true };
+          widgets[id] = widgets[id] || { size: 'medium', mode: 'desktop' };
           set({ widgets });
-          window.downer?.openWidget(id, widgets[id].size, widgets[id].alwaysOnTop);
+          window.downer?.openWidget(id, widgets[id].size, widgets[id].mode);
         } else {
           delete widgets[id];
           set({ widgets });
@@ -180,9 +180,9 @@ export const useStore = create<State>()(
       },
       updateWidget: (id, patch) => {
         const widgets = { ...get().widgets };
-        widgets[id] = { ...(widgets[id] || { size: 'medium', alwaysOnTop: true }), ...patch };
+        widgets[id] = { ...(widgets[id] || { size: 'medium', mode: 'desktop' }), ...patch };
         set({ widgets });
-        window.downer?.updateWidget(id, { size: widgets[id].size, alwaysOnTop: widgets[id].alwaysOnTop });
+        window.downer?.updateWidget(id, { size: widgets[id].size, mode: widgets[id].mode });
       },
       setTrayOpen: (b) => set({ trayOpen: b }),
 
@@ -219,6 +219,7 @@ export const useStore = create<State>()(
     }),
     {
       name: 'downer-state',
+      version: 2,
       partialize: (s) => ({
         events: s.events,
         categories: s.categories,
@@ -227,6 +228,21 @@ export const useStore = create<State>()(
         layout: s.layout,
         sort: s.sort,
       }),
+      migrate: (persisted: any, fromVersion: number) => {
+        // v2: WidgetConfig.alwaysOnTop -> WidgetConfig.mode ('float' | 'desktop')
+        if (fromVersion < 2 && persisted?.widgets) {
+          const next: Record<string, WidgetConfig> = {};
+          for (const [id, cfg] of Object.entries<any>(persisted.widgets)) {
+            next[id] = {
+              size: cfg.size || 'medium',
+              mode: cfg.mode || (cfg.alwaysOnTop ? 'float' : 'desktop'),
+              ...(cfg.style ? { style: cfg.style } : {}),
+            };
+          }
+          persisted.widgets = next;
+        }
+        return persisted;
+      },
     }
   )
 );

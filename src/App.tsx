@@ -54,6 +54,15 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Reopen all persisted widget windows on app launch.
+  useEffect(() => {
+    const { widgets } = useStore.getState();
+    for (const [eventId, cfg] of Object.entries(widgets)) {
+      window.downer?.openWidget(eventId, cfg.size, cfg.mode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const renderView = () => {
     switch (view.name) {
       case 'detail': return <DetailView eventId={view.eventId} />;

@@ -1,10 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('downer', {
-  openWidget: (eventId: string, size: 'small'|'medium'|'large', alwaysOnTop: boolean) =>
-    ipcRenderer.invoke('widget:open', { eventId, size, alwaysOnTop }),
+  openWidget: (eventId: string, size: 'small'|'medium'|'large', mode: 'float'|'desktop') =>
+    ipcRenderer.invoke('widget:open', { eventId, size, mode }),
   closeWidget: (eventId: string) => ipcRenderer.invoke('widget:close', eventId),
-  updateWidget: (eventId: string, payload: { size?: 'small'|'medium'|'large'; alwaysOnTop?: boolean }) =>
+  updateWidget: (eventId: string, payload: { size?: 'small'|'medium'|'large'; mode?: 'float'|'desktop' }) =>
     ipcRenderer.invoke('widget:update', { eventId, ...payload }),
 
   setWindowSize: (payload: { width: number; height: number }) =>
