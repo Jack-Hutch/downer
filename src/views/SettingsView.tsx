@@ -3,6 +3,7 @@ import { TopBar } from '../components/TopBar';
 import { Seg, Toggle, Btn } from '../components/primitives';
 import { BrandMark } from '../components/BrandMark';
 import { WINDOW_PRESETS } from '../types';
+import { APP_VERSION } from '../lib/version';
 
 export function SettingsView() {
   const { settings, setSettings } = useStore();
@@ -138,7 +139,7 @@ export function SettingsView() {
             <BrandMark size={44} accent={settings.accent} />
             <div>
               <div className="text-[13px] font-semibold text-fg">Downer</div>
-              <div className="text-[11.5px] text-fg-sub">Version 0.1.4 · macOS 11+</div>
+              <div className="text-[11.5px] text-fg-sub">Version {APP_VERSION} · macOS 11+</div>
             </div>
           </div>
         </Section>

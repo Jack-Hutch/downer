@@ -1,6 +1,7 @@
 import { useStore } from '../store/store';
 import { Icon } from './primitives';
 import { BrandMark } from './BrandMark';
+import { APP_VERSION } from '../lib/version';
 
 export function Sidebar() {
   const { view, setView, events, categories, settings, setSettings } = useStore();
@@ -28,7 +29,10 @@ export function Sidebar() {
 
       <div className="px-[18px] pt-1.5 pb-3.5 flex items-center gap-2.5 no-drag">
         <BrandMark size={22} accent={settings.accent} />
-        <div className="text-[13.5px] font-semibold tracking-[-0.01em]">Downer</div>
+        <div className="flex flex-col leading-tight min-w-0">
+          <span className="text-[13.5px] font-semibold tracking-[-0.01em] text-fg">Downer</span>
+          <span className="text-[10px] font-mono tabular-nums text-fg-sub">v{APP_VERSION}</span>
+        </div>
       </div>
 
       <SectionLabel>Library</SectionLabel>

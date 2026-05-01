@@ -15,7 +15,7 @@ export function WidgetsView() {
 
   return (
     <div className="flex flex-col h-full bg-bg">
-      <TopBar title="Widgets" subtitle="Floating, always-on-top countdowns for your desktop" />
+      <TopBar title="Widgets" subtitle="Pin countdowns to your desktop — on the wallpaper or floating above apps" />
       <div className="flex-1 overflow-auto py-6 px-8">
         <Eyebrow>Active widgets</Eyebrow>
         <div className="grid gap-3.5 mb-8" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>

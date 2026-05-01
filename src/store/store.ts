@@ -171,7 +171,7 @@ export const useStore = create<State>()(
         if (on) {
           widgets[id] = widgets[id] || { size: 'medium', mode: 'desktop' };
           set({ widgets });
-          window.downer?.openWidget(id, widgets[id].size, widgets[id].mode);
+          window.downer?.openWidget(id, widgets[id].size, widgets[id].mode, widgets[id].x, widgets[id].y);
         } else {
           delete widgets[id];
           set({ widgets });

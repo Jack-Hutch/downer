@@ -46,6 +46,17 @@ export default function App() {
     });
   }, []);
 
+  // Persist widget position whenever the user moves one, so it reopens in the
+  // same spot on next launch.
+  useEffect(() => {
+    window.downer?.onWidgetMoved((id, x, y) => {
+      const widgets = { ...useStore.getState().widgets };
+      if (!widgets[id]) return;
+      widgets[id] = { ...widgets[id], x, y };
+      useStore.setState({ widgets });
+    });
+  }, []);
+
   // Restore the saved main-window size on app start (one-shot).
   useEffect(() => {
     const s = useStore.getState().settings;
@@ -54,11 +65,11 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reopen all persisted widget windows on app launch.
+  // Reopen all persisted widget windows on app launch, restoring saved positions.
   useEffect(() => {
     const { widgets } = useStore.getState();
     for (const [eventId, cfg] of Object.entries(widgets)) {
-      window.downer?.openWidget(eventId, cfg.size, cfg.mode);
+      window.downer?.openWidget(eventId, cfg.size, cfg.mode, cfg.x, cfg.y);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

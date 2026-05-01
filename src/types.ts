@@ -24,6 +24,9 @@ export type WidgetMode = 'float' | 'desktop';
 export interface WidgetConfig {
   size: WidgetSize;
   mode: WidgetMode;
+  /** Last known screen position — persisted so widgets reopen where the user left them. */
+  x?: number;
+  y?: number;
   /** @deprecated kept for migration from earlier versions; replaced by `mode`. */
   alwaysOnTop?: boolean;
   style?: CountdownStyle;
@@ -69,7 +72,7 @@ export type ViewState =
 declare global {
   interface Window {
     downer?: {
-      openWidget: (id: string, size: WidgetSize, mode: WidgetMode) => Promise<void>;
+      openWidget: (id: string, size: WidgetSize, mode: WidgetMode, x?: number, y?: number) => Promise<void>;
       closeWidget: (id: string) => Promise<void>;
       updateWidget: (id: string, payload: { size?: WidgetSize; mode?: WidgetMode }) => Promise<void>;
       setWindowSize: (payload: { width: number; height: number }) => Promise<void>;
@@ -77,6 +80,7 @@ declare global {
       onStoreSnapshot: (cb: (s: any) => void) => void;
       notifyWidgetReady: () => void;
       onWidgetClosed: (cb: (id: string) => void) => void;
+      onWidgetMoved: (cb: (id: string, x: number, y: number) => void) => void;
     };
   }
 }

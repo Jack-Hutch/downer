@@ -27,6 +27,11 @@ function WidgetApp() {
     // Tell main we're loaded so it can push the latest cached snapshot directly,
     // without us having to wait for the next state-change broadcast.
     window.downer?.notifyWidgetReady();
+    // Safety retry: on a cold launch the main process may not have cached a
+    // snapshot yet when our ready signal arrives. If snap is still null after
+    // 600 ms, re-send the ready signal to trigger a fresh push.
+    const retry = setTimeout(() => window.downer?.notifyWidgetReady(), 600);
+    return () => clearTimeout(retry);
   }, []);
 
   // ── Render guards ──────────────────────────────────────────────────────

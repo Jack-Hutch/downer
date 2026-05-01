@@ -93,8 +93,8 @@ function createWidgetWindow(
       return;
     }
 
-    // Mode has changed.  Because BrowserWindow type:'desktop' is set at construction
-    // and cannot be mutated, we must tear down the old window and build a fresh one.
+    // Mode has changed.  Window options like alwaysOnTop / focusable can't be reliably
+    // patched at runtime for all modes, so tear down the old window and rebuild it.
     // Save the current on-screen position so the new window appears in the same spot.
     const [cx, cy] = existing.getPosition();
     position = position ?? { x: cx, y: cy };
@@ -118,9 +118,7 @@ function createWidgetWindow(
   const x = position?.x ?? (display.x + display.width  - dims.width  - 40 - offset);
   const y = position?.y ?? (display.y + 40 + offset);
 
-  // Build the option bag.  For desktop mode we pass type:'desktop' which instructs
-  // Electron (on macOS) to set kCGDesktopWindowLevel and the collection-behaviour
-  // flags that keep the window behind every app window and visible on all Spaces.
+  // Build window options.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const winOpts: Record<string, any> = {
     width:        dims.width,
@@ -143,15 +141,20 @@ function createWidgetWindow(
     },
   };
 
-  // NOTE: Don't set winOpts.type = 'desktop' — see applyWidgetMode comment.
-  // It hides the window beneath the wallpaper.
-
   const win = new BrowserWindow(winOpts);
 
   applyWidgetMode(win, mode);
   loadRoute(win, 'widget', `?eventId=${encodeURIComponent(eventId)}&mode=${mode}`);
   widgetWindows.set(eventId, win);
   widgetModes.set(eventId, mode);
+
+  // Notify the main renderer whenever the user moves this widget so the new
+  // position can be persisted in the store and restored on next launch.
+  win.on('moved', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    const [x, y] = win.getPosition();
+    mainWindow.webContents.send('widget-moved', eventId, x, y);
+  });
 
   win.on('closed', () => {
     widgetWindows.delete(eventId);
@@ -191,8 +194,9 @@ function createTray() {
   });
 }
 
-ipcMain.handle('widget:open', (_e, payload: { eventId: string; size: 'small'|'medium'|'large'; mode: WidgetMode }) => {
-  createWidgetWindow(payload.eventId, payload.size, payload.mode);
+ipcMain.handle('widget:open', (_e, payload: { eventId: string; size: 'small'|'medium'|'large'; mode: WidgetMode; x?: number; y?: number }) => {
+  const pos = (payload.x != null && payload.y != null) ? { x: payload.x, y: payload.y } : undefined;
+  createWidgetWindow(payload.eventId, payload.size, payload.mode, pos);
 });
 ipcMain.handle('widget:close', (_e, eventId: string) => {
   widgetWindows.get(eventId)?.close();
