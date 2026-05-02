@@ -1,5 +1,41 @@
-import { useEffect } from 'react';
+import { useEffect, Component, ReactNode } from 'react';
 import { useStore } from './store/store';
+
+// ── Error boundary — prevents a single-view crash from blanking the whole app ─
+class ViewErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-4 px-8 text-center">
+          <div className="text-[15px] font-semibold text-fg">Something went wrong</div>
+          <div className="text-[12px] text-fg-sub max-w-sm">
+            {this.state.error.message}
+          </div>
+          <button
+            onClick={() => {
+              this.setState({ error: null });
+              useStore.getState().setView({ name: 'dashboard' });
+            }}
+            className="h-8 px-4 rounded-lg bg-fg text-bg text-[12.5px] font-medium"
+          >
+            Back to dashboard
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './views/Dashboard';
 import { DetailView } from './views/DetailView';
@@ -108,7 +144,9 @@ export default function App() {
     <div className="flex h-screen w-screen overflow-hidden bg-bg text-fg">
       <Sidebar />
       <main className="flex-1 min-w-0 h-full overflow-hidden">
-        {renderView()}
+        <ViewErrorBoundary key={view.name}>
+          {renderView()}
+        </ViewErrorBoundary>
       </main>
     </div>
   );
