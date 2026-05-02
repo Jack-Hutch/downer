@@ -2,6 +2,8 @@ import { useStore } from '../store/store';
 import { TopBar } from '../components/TopBar';
 import { Seg, Toggle, Btn } from '../components/primitives';
 import { BrandMark } from '../components/BrandMark';
+import { FontPicker } from '../components/FontPicker';
+import { UpdateCheck } from '../components/UpdateCheck';
 import { WINDOW_PRESETS } from '../types';
 import { APP_VERSION } from '../lib/version';
 import { resetNotificationHistory } from '../lib/notifications';
@@ -44,9 +46,8 @@ export function SettingsView() {
               options={[{ v: 'compact', l: 'Compact' }, { v: 'regular', l: 'Regular' }, { v: 'comfy', l: 'Comfy' }]} />} />
           <Row label="Animations" desc="Smooth transitions across the app. Turn off for instant updates."
             control={<Toggle value={settings.animations} onChange={v => setSettings({ animations: v })} />} />
-          <Row label="Font" desc="Typography across the app."
-            control={<Seg value={settings.font} onChange={v => setSettings({ font: v as any })}
-              options={[{ v: 'sans', l: 'Sans' }, { v: 'serif', l: 'Serif' }, { v: 'mono', l: 'Mono' }]} />} />
+          <Row label="Font" desc="Typography across the app. Pick from system fonts grouped by style."
+            control={<FontPicker value={settings.font} onChange={id => setSettings({ font: id })} />} />
         </Section>
 
         {/* ── FORMAT ──────────────────────────────────────────────── */}
@@ -206,6 +207,11 @@ export function SettingsView() {
               <kbd className="font-mono text-[11px] px-2 py-0.5 rounded bg-hover text-fg-mid">{s.keys}</kbd>
             </div>
           ))}
+        </Section>
+
+        {/* ── UPDATES ───────────────────────────────────────────── */}
+        <Section title="Updates" desc="Downer checks GitHub Releases for new versions.">
+          <UpdateCheck />
         </Section>
 
         {/* ── ABOUT ─────────────────────────────────────────────── */}

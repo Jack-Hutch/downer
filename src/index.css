@@ -27,12 +27,26 @@
 html, body, #root {
   margin: 0;
   height: 100%;
-  font-family: var(--font-sans);
+  /* `--app-font` is set at runtime by App.tsx based on the user's font choice
+     (or pick from the rich Font dropdown). Falls back to the sans stack so a
+     fresh load before settings hydrate still renders sensibly. */
+  font-family: var(--app-font, var(--font-sans));
   background: rgb(var(--bg));
   color: rgb(var(--fg));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* ── Density scale ──────────────────────────────────────────────────────────
+   The app sets `html[data-density="compact|regular|comfy"]` from Settings.
+   Each value tweaks the sidebar item height and a few padding tokens so the
+   density choice is visible at a glance.
+*/
+html[data-density="compact"] { --row-h: 26px; --section-pad-y: 10px; --topbar-pad-y: 10px; }
+html[data-density="regular"] { --row-h: 30px; --section-pad-y: 14px; --topbar-pad-y: 14px; }
+html[data-density="comfy"]   { --row-h: 36px; --section-pad-y: 18px; --topbar-pad-y: 18px; }
+/* Default fallbacks if the attribute hasn't been set yet. */
+html { --row-h: 30px; --section-pad-y: 14px; --topbar-pad-y: 14px; }
 
 * { box-sizing: border-box; }
 

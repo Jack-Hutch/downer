@@ -13,9 +13,15 @@ export function Sidebar() {
   const NavItem = ({ id, icon, label, count, active }: any) => (
     <div
       onClick={() => setView({ name: id })}
-      className={`flex items-center gap-2.5 h-[30px] px-2.5 mx-2 rounded-md cursor-pointer text-[12.5px] transition-colors ${
-        active ? 'bg-selected text-fg font-semibold' : 'text-fg-mid hover:bg-hover font-medium'
+      className={`flex items-center gap-2.5 px-2.5 mx-2 rounded-md cursor-pointer text-[12.5px] transition-colors ${
+        active ? 'bg-selected font-semibold' : 'text-fg-mid hover:bg-hover font-medium'
       }`}
+      style={{
+        height: 'var(--row-h, 30px)',
+        // When active, color the icon + label with the user's accent so accent
+        // changes are immediately visible in the sidebar.
+        color: active ? 'var(--accent)' : undefined,
+      }}
     >
       <Icon name={icon} size={14} />
       <span className="flex-1">{label}</span>

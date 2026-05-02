@@ -51,18 +51,39 @@ import { useNotificationScheduler } from './lib/notifications';
 export default function App() {
   const { view, settings } = useStore();
 
-  // Apply dark mode + font + accent + animations toggle at root
+  // Apply theme tokens, font, accent, density, animations to <html> at runtime.
+  // Everything below cascades into the rest of the app via CSS variables.
   useEffect(() => {
+    const root = document.documentElement;
+
+    // Dark mode
     const dark = settings.theme === 'dark'
       || (settings.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.classList.toggle('dark', dark);
-    document.documentElement.classList.toggle('no-animations', !settings.animations);
-    const fontMap = {
-      sans: 'var(--font-sans)', serif: 'var(--font-serif)', mono: 'var(--font-mono)',
-    };
-    document.documentElement.style.setProperty('font-family', fontMap[settings.font] || fontMap.sans);
-    document.documentElement.style.setProperty('--accent', settings.accent);
-  }, [settings.theme, settings.font, settings.accent, settings.animations]);
+    root.classList.toggle('dark', dark);
+
+    // Animations
+    root.classList.toggle('no-animations', !settings.animations);
+
+    // Density — drives a data attribute that index.css uses to vary spacing.
+    root.setAttribute('data-density', settings.density);
+
+    // Font — settings.font is either a preset key ('sans' | 'serif' | 'mono')
+    // or a literal CSS font stack chosen from the rich picker. We map the
+    // preset keys to the matching --font-* variable, otherwise we use the
+    // string as-is. The result is written to `--app-font` (used by html/body).
+    const fontStack = (() => {
+      if (settings.font === 'sans')  return 'var(--font-sans)';
+      if (settings.font === 'serif') return 'var(--font-serif)';
+      if (settings.font === 'mono')  return 'var(--font-mono)';
+      return settings.font; // free-form font stack from the picker
+    })();
+    root.style.setProperty('--app-font', fontStack);
+
+    // Accent — written to --accent so any UI element that references it
+    // (primary buttons, toggle "on" color, segment-selected highlights, etc.)
+    // updates instantly when the user changes their accent.
+    root.style.setProperty('--accent', settings.accent);
+  }, [settings.theme, settings.font, settings.accent, settings.animations, settings.density]);
 
   // Push date/time format prefs into the standalone fmt helpers.
   useEffect(() => {

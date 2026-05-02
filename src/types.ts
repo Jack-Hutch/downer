@@ -54,7 +54,9 @@ export interface Settings {
   theme: 'light' | 'dark' | 'auto';
   accent: string;
   density: 'compact' | 'regular' | 'comfy';
-  font: 'sans' | 'serif' | 'mono';
+  /** Either a legacy preset key ('sans' | 'serif' | 'mono') or a font id from
+   *  FONT_OPTIONS in components/FontPicker.tsx. */
+  font: string;
   defaultStyle: 'auto' | CountdownStyle;
   showSeconds: boolean;
   daysOnly: boolean;
@@ -101,21 +103,20 @@ declare global {
       setWindowSize: (payload: { width: number; height: number }) => Promise<void>;
       setLaunchAtLogin: (enabled: boolean) => Promise<void>;
       showNotification: (payload: { title: string; body: string; silent?: boolean }) => Promise<void>;
+      checkForUpdates?: () => Promise<unknown>;
+      downloadUpdate?:  () => Promise<unknown>;
+      installUpdate?:   () => void;
+      onUpdateAvailable?:  (cb: (info: any) => void) => void;
+      onUpdateUpToDate?:   (cb: () => void) => void;
+      onUpdateProgress?:   (cb: (pct: number) => void) => void;
+      onUpdateDownloaded?: (cb: (info: any) => void) => void;
+      onUpdaterError?:     (cb: (msg: string) => void) => void;
       broadcastStore: (snapshot: unknown) => void;
       onStoreSnapshot: (cb: (s: any) => void) => void;
       notifyWidgetReady: () => void;
       onWidgetClosed: (cb: (id: string) => void) => void;
       onWidgetMoved: (cb: (id: string, x: number, y: number) => void) => void;
       setIgnoreMouseEvents: (ignore: boolean) => void;
-      // Auto-updater
-      checkForUpdates: () => Promise<{ status: string; message?: string }>;
-      downloadUpdate: () => Promise<void>;
-      installUpdate: () => void;
-      onUpdateAvailable: (cb: (info: any) => void) => void;
-      onUpdateUpToDate: (cb: () => void) => void;
-      onUpdateProgress: (cb: (pct: number) => void) => void;
-      onUpdateDownloaded: (cb: (info: any) => void) => void;
-      onUpdaterError: (cb: (msg: string) => void) => void;
     };
   }
 }

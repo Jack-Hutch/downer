@@ -28,16 +28,24 @@ interface BtnProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'size'>
   children?: ReactNode;
 }
 
-export function Btn({ primary, danger, ghost, size = 'md', icon, children, className = '', ...rest }: BtnProps) {
+export function Btn({ primary, danger, ghost, size = 'md', icon, children, className = '', style, ...rest }: BtnProps) {
   const base = 'inline-flex items-center gap-1.5 whitespace-nowrap font-medium rounded-lg transition active:scale-[0.98]';
   const sz = size === 'sm' ? 'h-7 px-2.5 text-[12px]' : 'h-[34px] px-3.5 text-[12.5px]';
   let look = 'border-[0.5px] border-fg/10 text-fg hover:bg-hover';
-  if (primary) look = 'bg-fg text-bg hover:opacity-90 border-[0.5px] border-transparent';
-  else if (danger) look = 'bg-red-600 text-white hover:bg-red-700 border-[0.5px] border-transparent';
-  else if (ghost) look = 'text-fg-mid hover:bg-hover border-[0.5px] border-transparent';
+  // Primary buttons paint with the user's chosen accent so picking a new
+  // accent in Settings is immediately visible across the app.
+  let inlineStyle: React.CSSProperties | undefined;
+  if (primary) {
+    look = 'text-white hover:opacity-90 border-[0.5px] border-transparent';
+    inlineStyle = { background: 'var(--accent)', color: '#fff' };
+  } else if (danger) {
+    look = 'bg-red-600 text-white hover:bg-red-700 border-[0.5px] border-transparent';
+  } else if (ghost) {
+    look = 'text-fg-mid hover:bg-hover border-[0.5px] border-transparent';
+  }
   const disabled = rest.disabled ? 'opacity-40 pointer-events-none' : '';
   return (
-    <button {...rest} className={`${base} ${sz} ${look} ${disabled} ${className}`}>
+    <button {...rest} style={{ ...inlineStyle, ...style }} className={`${base} ${sz} ${look} ${disabled} ${className}`}>
       {icon && <Icon name={icon} size={13} />}
       {children}
     </button>
@@ -62,9 +70,12 @@ export function Pill({ children, color, className = '' }: { children: ReactNode;
 export function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
+      type="button"
+      role="switch"
+      aria-checked={value}
       onClick={() => onChange(!value)}
       className="relative w-[38px] h-[22px] rounded-full transition-colors"
-      style={{ background: value ? '#34c759' : 'rgb(var(--fg) / 0.15)' }}
+      style={{ background: value ? 'var(--accent)' : 'rgb(var(--fg) / 0.15)' }}
     >
       <span
         className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-[left]"
