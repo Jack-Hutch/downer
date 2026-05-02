@@ -269,7 +269,7 @@ export const useStore = create<State>()(
     }),
     {
       name: 'downer-state',
-      version: 2,
+      version: 3,
       partialize: (s) => ({
         events: s.events,
         categories: s.categories,
@@ -279,6 +279,33 @@ export const useStore = create<State>()(
         layout: s.layout,
         sort: s.sort,
       }),
+      // Custom merge: deep-merge `settings` so that any field added in a newer
+      // version (e.g. customWindowSize, dateFormat, notificationSound...) is
+      // populated with its default when an older persisted state is loaded.
+      // Without this, accessing a missing nested property like
+      // `settings.customWindowSize.width` blows up the whole React tree.
+      merge: (persisted: any, current: State): State => {
+        const safeSettings: Settings = {
+          ...DEFAULT_SETTINGS,
+          ...(persisted?.settings ?? {}),
+          // customWindowSize is a NESTED object — re-merge it specifically so a
+          // partially-saved value still has both width and height.
+          customWindowSize: {
+            ...DEFAULT_SETTINGS.customWindowSize,
+            ...((persisted?.settings?.customWindowSize) ?? {}),
+          },
+        };
+        return {
+          ...current,
+          ...persisted,
+          // Defensive: ensure arrays/maps that newer code requires always exist,
+          // even if an older persisted blob didn't have them.
+          customThemes: persisted?.customThemes ?? current.customThemes,
+          widgets:      persisted?.widgets      ?? current.widgets,
+          categories:   persisted?.categories   ?? current.categories,
+          settings:     safeSettings,
+        };
+      },
       migrate: (persisted: any, fromVersion: number) => {
         // v2: WidgetConfig.alwaysOnTop -> WidgetConfig.mode ('float' | 'desktop')
         if (fromVersion < 2 && persisted?.widgets) {
@@ -291,6 +318,10 @@ export const useStore = create<State>()(
             };
           }
           persisted.widgets = next;
+        }
+        // v3: customThemes added; ensure the array exists for any older blob.
+        if (fromVersion < 3) {
+          persisted.customThemes = persisted.customThemes ?? [];
         }
         return persisted;
       },
