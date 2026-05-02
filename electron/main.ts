@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, screen } from 'electron';
 import * as path from 'path';
+import { autoUpdater } from 'electron-updater';
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
 const isDev = !!DEV_URL;
@@ -51,29 +52,26 @@ function createMainWindow() {
 type WidgetMode = 'float' | 'desktop';
 
 function applyWidgetMode(win: BrowserWindow, mode: WidgetMode) {
+  // Always visible across every Space, including full-screen app Spaces.
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+
+  // Both modes are fully focusable, fully interactive, fully draggable.
+  // The ONLY difference between them is whether the widget floats above
+  // every other window, or sits at normal window level.
+  //
+  // We deliberately DON'T use setIgnoreMouseEvents or setFocusable(false)
+  // for desktop mode — on macOS Sequoia, that combination plus transparent +
+  // frameless can make the window server skip rendering the window entirely.
+  // Reliable visibility beats the fancy click-through trick.
+  win.setIgnoreMouseEvents(false);
+  win.setFocusable(true);
+
   if (mode === 'float') {
-    // Pinned ABOVE all other windows (classic always-on-top widget).
+    // Pinned ABOVE all other windows — classic always-on-top widget.
     win.setAlwaysOnTop(true, 'floating');
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    win.setIgnoreMouseEvents(false);
-    win.setFocusable(true);
   } else {
-    // Desktop mode — appears on the wallpaper layer behind your app windows.
-    //
-    // We deliberately do NOT use `type: 'desktop'` here: in Electron that maps to
-    // `kCGDesktopWindowLevel - 1`, which is BELOW the macOS wallpaper, making the
-    // window invisible. Without a native module we can't get true "between wallpaper
-    // and apps" desktop level, so we approximate with:
-    //   • alwaysOnTop: false  → never pinned above other apps
-    //   • focusable: false    → never gets focus, so clicking other apps doesn't pull
-    //                           the widget forward; the widget stays put in z-order.
-    //   • visibleOnAllWorkspaces → travels with you across macOS Spaces
-    // The widget appears on the desktop, drops behind whatever you're working in,
-    // and re-appears when you minimize / Show Desktop.
+    // Desktop mode — normal window level. Layered behind apps that come forward.
     win.setAlwaysOnTop(false);
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    win.setIgnoreMouseEvents(true, { forward: true });
-    win.setFocusable(false);
   }
 }
 
@@ -128,10 +126,11 @@ function createWidgetWindow(
     frame:        false,
     transparent:  true,
     alwaysOnTop:  mode === 'float',
-    focusable:    mode === 'float',
+    focusable:    true,  // both modes — see applyWidgetMode comment
     resizable:    false,
     skipTaskbar:  true,
-    hasShadow:    mode === 'float', // desktop widgets: CSS handles the shadow
+    show:         false, // shown via ready-to-show to avoid flash of empty content
+    hasShadow:    false, // CSS handles the shadow for both modes
     backgroundColor: '#00000000',
     webPreferences: {
       preload:             path.join(__dirname, 'preload.js'),
@@ -147,6 +146,31 @@ function createWidgetWindow(
   loadRoute(win, 'widget', `?eventId=${encodeURIComponent(eventId)}&mode=${mode}`);
   widgetWindows.set(eventId, win);
   widgetModes.set(eventId, mode);
+
+  // Show once content is rendered, to avoid a flash of empty transparent content.
+  // We use show() for both modes — showInactive() on a transparent borderless
+  // window has been observed to silently no-op on macOS Sequoia, leaving the
+  // widget invisible. show() reliably puts the window on screen.
+  win.once('ready-to-show', () => {
+    win.show();
+  });
+
+  // Belt-and-braces fallback: if 'ready-to-show' doesn't fire within 2s
+  // (rare, but possible if the renderer crashes silently), force-show anyway
+  // so the user always sees the widget on screen.
+  setTimeout(() => {
+    if (!win.isDestroyed() && !win.isVisible()) {
+      console.warn(`[widget] ready-to-show didn't fire in 2s, force-showing id=${eventId}`);
+      win.show();
+    }
+  }, 2000);
+
+  // Diagnostic — visible in Console.app under "Downer" if the user needs to verify
+  // that widget creation is actually happening (e.g. when troubleshooting).
+  console.log(`[widget] created id=${eventId} mode=${mode} size=${size} pos=(${x},${y}) dims=${dims.width}x${dims.height}`);
+  win.webContents.once('did-finish-load', () => {
+    console.log(`[widget] loaded id=${eventId} bounds=`, win.getBounds());
+  });
 
   // Notify the main renderer whenever the user moves this widget so the new
   // position can be persisted in the store and restored on next launch.
@@ -235,6 +259,20 @@ ipcMain.handle('widget:update', (_e, payload: { eventId: string; size?: 'small'|
   }
 });
 
+// Widget renderer calls this to toggle per-pixel click-through for desktop mode.
+// When the mouse is over the transparent padding, ignore=true lets clicks fall
+// through to the desktop.  When the mouse enters the opaque card area, ignore=false
+// re-enables interaction (including the -webkit-app-region drag gesture).
+ipcMain.on('widget:ignore-mouse', (e, ignore: boolean) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  if (!win || win.isDestroyed()) return;
+  if (ignore) {
+    win.setIgnoreMouseEvents(true, { forward: true });
+  } else {
+    win.setIgnoreMouseEvents(false);
+  }
+});
+
 // Cache the latest store snapshot in main so newly-created widget windows can
 // pull it on mount instead of racing the next state-change broadcast.
 let latestSnapshot: unknown = null;
@@ -256,6 +294,47 @@ ipcMain.on('widget:ready', (e) => {
   if (latestSnapshot) {
     e.sender.send('store:snapshot', latestSnapshot);
   }
+});
+
+// ── Auto-updater ────────────────────────────────────────────────────────────
+// Disable auto-download so the user chooses when to apply an update.
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+
+autoUpdater.on('update-available', (info) => {
+  mainWindow?.webContents.send('updater:update-available', info);
+});
+autoUpdater.on('update-not-available', () => {
+  mainWindow?.webContents.send('updater:up-to-date');
+});
+autoUpdater.on('download-progress', (p) => {
+  mainWindow?.webContents.send('updater:progress', Math.round(p.percent));
+});
+autoUpdater.on('update-downloaded', (info) => {
+  mainWindow?.webContents.send('updater:downloaded', info);
+});
+autoUpdater.on('error', (err) => {
+  mainWindow?.webContents.send('updater:error', err.message);
+});
+
+ipcMain.handle('updater:check', async () => {
+  if (isDev) return { status: 'dev' };
+  try {
+    await autoUpdater.checkForUpdates();
+    return { status: 'checking' };
+  } catch (e: any) {
+    return { status: 'error', message: e.message };
+  }
+});
+
+ipcMain.handle('updater:download', async () => {
+  try {
+    await autoUpdater.downloadUpdate();
+  } catch { /* handled by error event */ }
+});
+
+ipcMain.handle('updater:install', () => {
+  autoUpdater.quitAndInstall();
 });
 
 app.whenReady().then(() => {

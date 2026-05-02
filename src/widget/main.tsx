@@ -5,6 +5,7 @@ import { themeById } from '../lib/themes';
 import { fmtRelative } from '../lib/format';
 import type { DownerEvent, WidgetConfig, Settings, Category } from '../types';
 import '../index.css';
+import './widget.css';
 
 interface Snapshot {
   events: DownerEvent[];
@@ -62,7 +63,7 @@ function WidgetApp() {
 
   return (
     <div
-      className={`absolute inset-0 rounded-[14px] overflow-hidden flex flex-col ${isDesktop ? '' : 'titlebar-drag'}`}
+      className={`absolute inset-0 rounded-[14px] overflow-hidden flex flex-col titlebar-drag`}
       style={{
         background: ct.bg,
         color: ct.fg,

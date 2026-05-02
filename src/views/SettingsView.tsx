@@ -4,6 +4,7 @@ import { Seg, Toggle, Btn } from '../components/primitives';
 import { BrandMark } from '../components/BrandMark';
 import { WINDOW_PRESETS } from '../types';
 import { APP_VERSION } from '../lib/version';
+import { useState, useEffect } from 'react';
 
 export function SettingsView() {
   const { settings, setSettings } = useStore();
@@ -135,12 +136,15 @@ export function SettingsView() {
         </Section>
 
         <Section title="About">
-          <div className="flex items-center gap-3.5 py-2">
-            <BrandMark size={44} accent={settings.accent} />
-            <div>
-              <div className="text-[13px] font-semibold text-fg">Downer</div>
-              <div className="text-[11.5px] text-fg-sub">Version {APP_VERSION} · macOS 11+</div>
+          <div className="flex items-center justify-between gap-3.5 py-2">
+            <div className="flex items-center gap-3.5">
+              <BrandMark size={44} accent={settings.accent} />
+              <div>
+                <div className="text-[13px] font-semibold text-fg">Downer</div>
+                <div className="text-[11.5px] text-fg-sub">Version {APP_VERSION} · macOS 11+</div>
+              </div>
             </div>
+            <UpdateButton />
           </div>
         </Section>
       </div>
@@ -166,6 +170,57 @@ function Row({ label, desc, control }: { label: string; desc?: string; control: 
         {desc && <div className="text-[11.5px] text-fg-sub mt-0.5">{desc}</div>}
       </div>
       {control}
+    </div>
+  );
+}
+
+type UpdateState = 'idle' | 'checking' | 'up-to-date' | 'available' | 'downloading' | 'ready' | 'error';
+
+function UpdateButton() {
+  const [state, setState] = useState<UpdateState>('idle');
+  const [progress, setProgress] = useState(0);
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => {
+    window.downer?.onUpdateAvailable((info) => {
+      setState('available');
+      setMsg(`v${info.version} is ready to download`);
+    });
+    window.downer?.onUpdateUpToDate(() => setState('up-to-date'));
+    window.downer?.onUpdateProgress((pct) => { setState('downloading'); setProgress(pct); });
+    window.downer?.onUpdateDownloaded(() => setState('ready'));
+    window.downer?.onUpdaterError((m) => { setState('error'); setMsg(m); });
+  }, []);
+
+  const label = {
+    idle: 'Check for updates',
+    checking: 'Checking…',
+    'up-to-date': 'Up to date ✓',
+    available: 'Download update',
+    downloading: `Downloading ${progress}%`,
+    ready: 'Restart to update',
+    error: 'Retry',
+  }[state];
+
+  const handleClick = async () => {
+    if (state === 'idle' || state === 'up-to-date' || state === 'error') {
+      setState('checking');
+      const r = await window.downer?.checkForUpdates();
+      if (r?.status === 'dev') { setState('up-to-date'); }
+    } else if (state === 'available') {
+      window.downer?.downloadUpdate();
+    } else if (state === 'ready') {
+      window.downer?.installUpdate();
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <Btn size="sm" onClick={handleClick}
+        disabled={state === 'checking' || state === 'downloading'}>
+        {label}
+      </Btn>
+      {msg && <div className="text-[10.5px] text-fg-sub max-w-[180px] text-right truncate">{msg}</div>}
     </div>
   );
 }

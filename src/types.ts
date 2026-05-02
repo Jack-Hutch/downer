@@ -81,6 +81,16 @@ declare global {
       notifyWidgetReady: () => void;
       onWidgetClosed: (cb: (id: string) => void) => void;
       onWidgetMoved: (cb: (id: string, x: number, y: number) => void) => void;
+      setIgnoreMouseEvents: (ignore: boolean) => void;
+      // Auto-updater
+      checkForUpdates: () => Promise<{ status: string; message?: string }>;
+      downloadUpdate: () => Promise<void>;
+      installUpdate: () => void;
+      onUpdateAvailable: (cb: (info: any) => void) => void;
+      onUpdateUpToDate: (cb: () => void) => void;
+      onUpdateProgress: (cb: (pct: number) => void) => void;
+      onUpdateDownloaded: (cb: (info: any) => void) => void;
+      onUpdaterError: (cb: (msg: string) => void) => void;
     };
   }
 }

@@ -21,4 +21,18 @@ contextBridge.exposeInMainWorld('downer', {
   onWidgetMoved: (cb: (eventId: string, x: number, y: number) => void) => {
     ipcRenderer.on('widget-moved', (_e, id, x, y) => cb(id, x, y));
   },
+  /** Toggle click-through for the calling widget window. Pass true to let clicks
+   *  fall through to apps behind the widget; false to allow drag interaction. */
+  setIgnoreMouseEvents: (ignore: boolean) =>
+    ipcRenderer.send('widget:ignore-mouse', ignore),
+
+  // ── Auto-updater ──────────────────────────────────────────────────────────
+  checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+  downloadUpdate:  () => ipcRenderer.invoke('updater:download'),
+  installUpdate:   () => ipcRenderer.invoke('updater:install'),
+  onUpdateAvailable:   (cb: (info: any) => void) => ipcRenderer.on('updater:update-available', (_e, i) => cb(i)),
+  onUpdateUpToDate:    (cb: () => void)           => ipcRenderer.on('updater:up-to-date', () => cb()),
+  onUpdateProgress:    (cb: (pct: number) => void) => ipcRenderer.on('updater:progress', (_e, p) => cb(p)),
+  onUpdateDownloaded:  (cb: (info: any) => void) => ipcRenderer.on('updater:downloaded', (_e, i) => cb(i)),
+  onUpdaterError:      (cb: (msg: string) => void) => ipcRenderer.on('updater:error', (_e, m) => cb(m)),
 });

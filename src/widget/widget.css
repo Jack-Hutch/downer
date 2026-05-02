@@ -1,0 +1,18 @@
+/*
+ * Widget-window-only overrides. Loaded AFTER index.css so these win the cascade.
+ *
+ * The widget BrowserWindow is created with transparent: true, but the global
+ * stylesheet (../index.css) sets `body { background: rgb(var(--bg)) }` which
+ * makes the body opaque, defeating window-level transparency. These rules
+ * force the html / body / #root chain to be fully transparent so only the
+ * rendered widget card is visible — with proper rounded corners and no solid
+ * rectangle behind it.
+ */
+html, body, #root {
+  background: transparent !important;
+  color-scheme: normal;
+}
+body {
+  /* Avoid macOS' default focus ring on the borderless window. */
+  outline: none;
+}
