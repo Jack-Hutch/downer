@@ -1,9 +1,27 @@
 export type CountdownStyle = 'large' | 'digital' | 'ring' | 'dots' | 'flip';
-export type CardThemeId = 'paper' | 'sand' | 'sage' | 'sky' | 'rose' | 'lilac' | 'ink' | 'cocoa';
+/** Theme IDs are now free-form strings — built-ins use the legacy keys
+ *  (paper, sand, sage, …) and user-created themes use generated IDs. */
+export type CardThemeId = string;
 export type Repeat = null | 'yearly' | 'monthly' | 'weekly';
 export type WidgetSize = 'small' | 'medium' | 'large';
 
 export interface Category { id: string; label: string; color: string; }
+
+export interface CardTheme {
+  id: string;
+  label: string;
+  /** Card / widget background. */
+  bg: string;
+  /** Foreground text color. Should contrast with bg. */
+  fg: string;
+  /** Accent used by countdowns (rings, digits, dot grids…). */
+  accent: string;
+  /** True for the macOS-style "dark" presets (Ink, Cocoa). Affects
+   *  border / overlay colors so they read on a dark surface. */
+  dark?: boolean;
+  /** Built-in presets are read-only — can't be edited or deleted. */
+  builtin?: boolean;
+}
 
 export interface DownerEvent {
   id: string;
@@ -69,6 +87,7 @@ export type ViewState =
   | { name: 'categories' }
   | { name: 'widgets' }
   | { name: 'settings' }
+  | { name: 'themes' }
   | { name: 'detail'; eventId: string }
   | { name: 'create' }
   | { name: 'edit'; eventId: string };

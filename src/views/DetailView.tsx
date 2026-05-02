@@ -1,6 +1,6 @@
 import { useState, CSSProperties } from 'react';
 import { useStore } from '../store/store';
-import { themeById, COUNTDOWN_STYLES } from '../lib/themes';
+import { useTheme, COUNTDOWN_STYLES } from '../lib/themes';
 import { Countdown } from '../countdowns/Countdown';
 import { Icon } from '../components/primitives';
 import { fmtDateTime, fmtRelative } from '../lib/format';
@@ -9,7 +9,7 @@ import type { CountdownStyle } from '../types';
 export function DetailView({ eventId }: { eventId: string }) {
   const { events, categories, settings, setView, startEdit, togglePin, archiveEvent, deleteEvent } = useStore();
   const event = events.find(e => e.id === eventId);
-  const ct = themeById(event?.theme || 'paper');
+  const ct = useTheme(event?.theme || 'paper');
   const [active, setActive] = useState<CountdownStyle>(
     settings.defaultStyle === 'auto' ? (event?.style || 'large') : settings.defaultStyle
   );

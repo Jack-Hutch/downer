@@ -3,13 +3,14 @@ import ReactDOM from 'react-dom/client';
 import { Countdown } from '../countdowns/Countdown';
 import { themeById } from '../lib/themes';
 import { fmtRelative } from '../lib/format';
-import type { DownerEvent, WidgetConfig, Settings, Category } from '../types';
+import type { CardTheme, DownerEvent, WidgetConfig, Settings, Category } from '../types';
 import '../index.css';
 import './widget.css';
 
 interface Snapshot {
   events: DownerEvent[];
   categories: Category[];
+  customThemes?: CardTheme[];
   widgets: Record<string, WidgetConfig>;
   settings: Settings;
 }
@@ -49,7 +50,7 @@ function WidgetApp() {
   }
 
   const cfg = snap.widgets[eventId] || { size: 'medium' as const, mode: 'desktop' as const };
-  const ct = themeById(event.theme);
+  const ct = themeById(event.theme, snap.customThemes ?? []);
   const widgetStyle = cfg.style || event.style;
 
   const styleScale: Record<string, Record<string, number>> = {

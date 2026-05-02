@@ -72,6 +72,7 @@ export function Sidebar() {
 
       <div className="py-1.5 border-t border-fg/10">
         <NavItem id="widgets" icon="widget" label="Widgets" active={view.name === 'widgets'} />
+        <NavItem id="themes" icon="image" label="Themes" active={view.name === 'themes'} />
         <NavItem id="settings" icon="settings" label="Settings" active={view.name === 'settings'} />
         <div
           onClick={() => setSettings({ theme: dark ? 'light' : 'dark' })}

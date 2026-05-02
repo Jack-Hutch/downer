@@ -1,7 +1,8 @@
 import { useStore } from '../store/store';
 import { TopBar } from '../components/TopBar';
 import { Btn } from '../components/primitives';
-import { themeById, COUNTDOWN_STYLES } from '../lib/themes';
+import { useResolvedThemes, COUNTDOWN_STYLES } from '../lib/themes';
+import { themeById } from '../lib/themes';
 import { Countdown } from '../countdowns/Countdown';
 import { fmtRelative } from '../lib/format';
 import type { WidgetSize } from '../types';
@@ -12,6 +13,7 @@ const SIZES: { v: WidgetSize; l: string }[] = [
 
 export function WidgetsView() {
   const { events, widgets, toggleWidget, updateWidget } = useStore();
+  const themes = useResolvedThemes();
 
   return (
     <div className="flex flex-col h-full bg-bg">
@@ -20,7 +22,7 @@ export function WidgetsView() {
         <Eyebrow>Active widgets</Eyebrow>
         <div className="grid gap-3.5 mb-8" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
           {events.filter(e => widgets[e.id]).map(ev => {
-            const ct = themeById(ev.theme);
+            const ct = themeById(ev.theme, themes);
             const cfg = widgets[ev.id];
             return (
               <div key={ev.id} className="rounded-xl border-[0.5px] border-fg/10 bg-surface overflow-hidden">
@@ -83,7 +85,7 @@ export function WidgetsView() {
         <div className="bg-surface rounded-xl border-[0.5px] border-fg/10 overflow-hidden">
           {events.filter(e => !e.archived).map((ev, i) => {
             const on = !!widgets[ev.id];
-            const ct = themeById(ev.theme);
+            const ct = themeById(ev.theme, themes);
             return (
               <div key={ev.id} className="flex items-center gap-3.5 px-4 py-3"
                 style={{ borderTop: i === 0 ? 'none' : '0.5px solid rgb(var(--fg) / 0.08)' }}>

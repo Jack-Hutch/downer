@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
-  Category, DownerEvent, Settings, ViewState, WidgetConfig, WidgetSize, CountdownStyle,
+  Category, CardTheme, DownerEvent, Settings, ViewState, WidgetConfig, WidgetSize, CountdownStyle,
 } from '../types';
 
 const DEFAULT_CATEGORIES: Category[] = [
@@ -64,6 +64,7 @@ const DEFAULT_SETTINGS: Settings = {
 interface State {
   events: DownerEvent[];
   categories: Category[];
+  customThemes: CardTheme[];
   widgets: Record<string, WidgetConfig>;
   settings: Settings;
   view: ViewState;
@@ -79,6 +80,10 @@ interface State {
   setSort: (s: 'date' | 'name' | 'category') => void;
   setSettings: (patch: Partial<Settings>) => void;
   setCategories: (c: Category[]) => void;
+  addTheme: (t: Omit<CardTheme, 'id' | 'builtin'>) => string;
+  updateTheme: (id: string, patch: Partial<Omit<CardTheme, 'id' | 'builtin'>>) => void;
+  deleteTheme: (id: string) => void;
+  duplicateTheme: (sourceId: string) => string | null;
   startCreate: () => void;
   startEdit: (id: string) => void;
   updateDraft: (patch: Partial<DownerEvent>) => void;
@@ -104,6 +109,7 @@ export const useStore = create<State>()(
     (set, get) => ({
       events: SAMPLE_EVENTS,
       categories: DEFAULT_CATEGORIES,
+      customThemes: [],
       widgets: {},
       settings: DEFAULT_SETTINGS,
       view: { name: 'dashboard' },
@@ -119,6 +125,46 @@ export const useStore = create<State>()(
       setSort: (s) => set({ sort: s }),
       setSettings: (patch) => set({ settings: { ...get().settings, ...patch } }),
       setCategories: (c) => set({ categories: c }),
+
+      addTheme: (t) => {
+        const id = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+        const next: CardTheme = { ...t, id };
+        set({ customThemes: [...get().customThemes, next] });
+        return id;
+      },
+      updateTheme: (id, patch) => {
+        set({
+          customThemes: get().customThemes.map(t =>
+            t.id === id && !t.builtin ? { ...t, ...patch } : t
+          ),
+        });
+      },
+      deleteTheme: (id) => {
+        // Reassign any events that used this theme to the default 'paper' so
+        // we never have a dangling reference.
+        const next = get().customThemes.filter(t => t.id !== id);
+        const events = get().events.map(e => e.theme === id ? { ...e, theme: 'paper' } : e);
+        set({ customThemes: next, events });
+      },
+      duplicateTheme: (sourceId) => {
+        const builtins: CardTheme[] = [
+          { id: 'paper', label: 'Paper', bg: '#f5f1e8', fg: '#14120f', accent: '#14120f', builtin: true },
+          { id: 'sand',  label: 'Sand',  bg: '#e8dcc4', fg: '#2a2418', accent: '#8b6f3f', builtin: true },
+          { id: 'sage',  label: 'Sage',  bg: '#dde5d8', fg: '#1a2418', accent: '#4a6b3f', builtin: true },
+          { id: 'sky',   label: 'Sky',   bg: '#d8e3ec', fg: '#152230', accent: '#3f5a7a', builtin: true },
+          { id: 'rose',  label: 'Rose',  bg: '#ecd8d8', fg: '#2a1818', accent: '#8b3f3f', builtin: true },
+          { id: 'lilac', label: 'Lilac', bg: '#e0dceb', fg: '#1f1830', accent: '#5a4a8b', builtin: true },
+          { id: 'ink',   label: 'Ink',   bg: '#1a1815', fg: '#f5f1e8', accent: '#d97757', dark: true, builtin: true },
+          { id: 'cocoa', label: 'Cocoa', bg: '#2a2218', fg: '#f0e6d4', accent: '#d4a574', dark: true, builtin: true },
+        ];
+        const source = get().customThemes.find(t => t.id === sourceId)
+                    ?? builtins.find(t => t.id === sourceId);
+        if (!source) return null;
+        return get().addTheme({
+          label: `${source.label} copy`,
+          bg: source.bg, fg: source.fg, accent: source.accent, dark: source.dark,
+        });
+      },
 
       startCreate: () => set({
         view: { name: 'create' },
@@ -227,6 +273,7 @@ export const useStore = create<State>()(
       partialize: (s) => ({
         events: s.events,
         categories: s.categories,
+        customThemes: s.customThemes,
         widgets: s.widgets,
         settings: s.settings,
         layout: s.layout,

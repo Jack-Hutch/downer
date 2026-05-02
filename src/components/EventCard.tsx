@@ -1,6 +1,6 @@
 import { CSSProperties } from 'react';
 import { Countdown, useCountdown } from '../countdowns/Countdown';
-import { themeById } from '../lib/themes';
+import { useTheme } from '../lib/themes';
 import { fmtDateTime } from '../lib/format';
 import { Icon, Pill } from './primitives';
 import type { Category, DownerEvent, CountdownStyle } from '../types';
@@ -14,7 +14,7 @@ interface CardProps {
 }
 
 export function EventCard({ event, onClick, density = 'regular', styleOverride, categories }: CardProps) {
-  const ct = themeById(event.theme);
+  const ct = useTheme(event.theme);
   const cat = categories.find(c => c.id === event.category);
   const dStyle = styleOverride || event.style;
   const padding = density === 'compact' ? 18 : density === 'comfy' ? 28 : 22;
@@ -74,7 +74,7 @@ export function EventCard({ event, onClick, density = 'regular', styleOverride, 
 export function EventRow({ event, onClick, isFirst, styleOverride: _so, categories }: {
   event: DownerEvent; onClick?: () => void; isFirst?: boolean; styleOverride?: CountdownStyle | null; categories: Category[];
 }) {
-  const ct = themeById(event.theme);
+  const ct = useTheme(event.theme);
   const cat = categories.find(c => c.id === event.category);
   const { days, hours, mins, secs, past } = useCountdown(event.target);
 

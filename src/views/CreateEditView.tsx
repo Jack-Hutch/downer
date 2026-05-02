@@ -1,7 +1,7 @@
 import { useStore } from '../store/store';
 import { TopBar } from '../components/TopBar';
 import { Btn } from '../components/primitives';
-import { CARD_THEMES, COUNTDOWN_STYLES, themeById } from '../lib/themes';
+import { useResolvedThemes, useTheme, COUNTDOWN_STYLES } from '../lib/themes';
 import { EventCard } from '../components/EventCard';
 import { Countdown } from '../countdowns/Countdown';
 import { fmtDateTime, toDateInput, toTimeInput, setDatePart, setTimePart } from '../lib/format';
@@ -9,7 +9,8 @@ import { fmtDateTime, toDateInput, toTimeInput, setDatePart, setTimePart } from 
 export function CreateEditView({ isEdit }: { isEdit: boolean }) {
   const { draft, updateDraft, saveDraft, cancelDraft, categories } = useStore();
   if (!draft) return null;
-  const ct = themeById(draft.theme);
+  const ct = useTheme(draft.theme);
+  const themes = useResolvedThemes();
 
   return (
     <div className="flex flex-col h-full bg-bg">
@@ -97,7 +98,7 @@ export function CreateEditView({ isEdit }: { isEdit: boolean }) {
 
           <Field label="Card theme">
             <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-              {CARD_THEMES.map(t => {
+              {themes.map(t => {
                 const sel = draft.theme === t.id;
                 return (
                   <button

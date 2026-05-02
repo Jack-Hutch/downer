@@ -6,6 +6,7 @@ import { DetailView } from './views/DetailView';
 import { CreateEditView } from './views/CreateEditView';
 import { SettingsView } from './views/SettingsView';
 import { CategoriesView } from './views/CategoriesView';
+import { ThemesView } from './views/ThemesView';
 import { WidgetsView } from './views/WidgetsView';
 import { WINDOW_PRESETS } from './types';
 import { applyFormatSettings } from './lib/format';
@@ -41,7 +42,11 @@ export default function App() {
     const send = () => {
       const s = useStore.getState();
       window.downer?.broadcastStore({
-        events: s.events, categories: s.categories, widgets: s.widgets, settings: s.settings,
+        events: s.events,
+        categories: s.categories,
+        customThemes: s.customThemes,
+        widgets: s.widgets,
+        settings: s.settings,
       });
     };
     send();
@@ -93,6 +98,7 @@ export default function App() {
       case 'edit': return <CreateEditView isEdit={true} />;
       case 'settings': return <SettingsView />;
       case 'categories': return <CategoriesView />;
+      case 'themes': return <ThemesView />;
       case 'widgets': return <WidgetsView />;
       default: return <Dashboard />;
     }
