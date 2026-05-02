@@ -4,14 +4,18 @@ import { Seg, Toggle, Btn } from '../components/primitives';
 import { BrandMark } from '../components/BrandMark';
 import { WINDOW_PRESETS } from '../types';
 import { APP_VERSION } from '../lib/version';
-import { useState, useEffect } from 'react';
+import { resetNotificationHistory } from '../lib/notifications';
+import { useState, useRef } from 'react';
 
 export function SettingsView() {
   const { settings, setSettings } = useStore();
+
   return (
     <div className="flex flex-col h-full bg-bg">
       <TopBar title="Settings" subtitle="Customize how Downer looks and behaves" />
       <div className="flex-1 overflow-auto py-6 px-8 max-w-[720px] w-full self-center">
+
+        {/* ── APPEARANCE ─────────────────────────────────────────────── */}
         <Section title="Appearance" desc="Theme, density and animations.">
           <Row label="Theme" desc="Switch between light and dark modes."
             control={<Seg value={settings.theme} onChange={v => setSettings({ theme: v as any })}
@@ -30,6 +34,7 @@ export function SettingsView() {
                         ? '0 0 0 2px rgb(var(--bg)), 0 0 0 3.5px rgb(var(--fg))'
                         : 'inset 0 0 0 0.5px rgba(0,0,0,0.1)',
                     }}
+                    aria-label={`Accent ${c}`}
                   />
                 ))}
               </div>
@@ -37,36 +42,75 @@ export function SettingsView() {
           <Row label="Density" desc="Compact, regular or comfy spacing."
             control={<Seg value={settings.density} onChange={v => setSettings({ density: v as any })}
               options={[{ v: 'compact', l: 'Compact' }, { v: 'regular', l: 'Regular' }, { v: 'comfy', l: 'Comfy' }]} />} />
-          <Row label="Animations" desc="Smooth transitions and ticking countdowns."
+          <Row label="Animations" desc="Smooth transitions across the app. Turn off for instant updates."
             control={<Toggle value={settings.animations} onChange={v => setSettings({ animations: v })} />} />
           <Row label="Font" desc="Typography across the app."
             control={<Seg value={settings.font} onChange={v => setSettings({ font: v as any })}
               options={[{ v: 'sans', l: 'Sans' }, { v: 'serif', l: 'Serif' }, { v: 'mono', l: 'Mono' }]} />} />
         </Section>
 
-        <Section title="Defaults" desc="Applied to new countdowns.">
+        {/* ── FORMAT ──────────────────────────────────────────────── */}
+        <Section title="Format" desc="How dates and times are displayed throughout the app.">
+          <Row label="Date format"
+            desc={dateFormatExample(settings.dateFormat)}
+            control={<Seg value={settings.dateFormat} onChange={v => setSettings({ dateFormat: v as any })}
+              options={[
+                { v: 'us',  l: 'US' },
+                { v: 'eu',  l: 'EU' },
+                { v: 'iso', l: 'ISO' },
+              ]} />} />
+          <Row label="Time format"
+            desc={settings.timeFormat === '12h' ? 'e.g. 4:30 PM' : 'e.g. 16:30'}
+            control={<Seg value={settings.timeFormat} onChange={v => setSettings({ timeFormat: v as any })}
+              options={[{ v: '12h', l: '12-hour' }, { v: '24h', l: '24-hour' }]} />} />
+          <Row label="Week starts on"
+            control={<Seg value={settings.weekStart} onChange={v => setSettings({ weekStart: v as any })}
+              options={[{ v: 'sun', l: 'Sunday' }, { v: 'mon', l: 'Monday' }]} />} />
+        </Section>
+
+        {/* ── DEFAULTS ────────────────────────────────────────────── */}
+        <Section title="Countdown defaults" desc="How countdowns are rendered.">
           <Row label="Default countdown style"
+            desc="Override the per-event style with a single style across the dashboard."
             control={<Seg value={settings.defaultStyle} onChange={v => setSettings({ defaultStyle: v as any })}
               options={[
                 { v: 'auto', l: 'Per event' }, { v: 'large', l: 'Number' },
                 { v: 'digital', l: 'Digital' }, { v: 'ring', l: 'Ring' }, { v: 'flip', l: 'Flip' },
               ]} />} />
-          <Row label="Show seconds" desc="On clock-style countdowns."
+          <Row label="Show seconds" desc="Include seconds in clock-style countdowns."
             control={<Toggle value={settings.showSeconds} onChange={v => setSettings({ showSeconds: v })} />} />
-          <Row label="Show days only" desc="Hide hours, minutes and seconds where possible."
+          <Row label="Days only" desc="Hide hours, minutes and seconds. Just the day count."
             control={<Toggle value={settings.daysOnly} onChange={v => setSettings({ daysOnly: v })} />} />
         </Section>
 
-        <Section title="Notifications" desc="Reminders and alerts.">
-          <Row label="Notify before event" desc="Get a reminder ahead of time."
+        {/* ── NOTIFICATIONS ───────────────────────────────────────── */}
+        <Section title="Notifications" desc="Reminders fire as native macOS notifications.">
+          <Row label="Notify before event" desc="Get a reminder when an event is approaching."
             control={<Toggle value={settings.notify} onChange={v => setSettings({ notify: v })} />} />
-          <Row label="Reminder window"
+          <Row label="Reminder window" desc="How far ahead of an event to notify you."
             control={<Seg value={settings.reminderWindow} onChange={v => setSettings({ reminderWindow: v as any })}
-              options={[{ v: '1h', l: '1h' }, { v: '1d', l: '1 day' }, { v: '1w', l: '1 week' }]} />} />
-          <Row label="Daily summary" desc="Morning digest of upcoming events."
+              options={[{ v: '1h', l: '1 hour' }, { v: '1d', l: '1 day' }, { v: '1w', l: '1 week' }]} />} />
+          <Row label="Daily summary" desc="A digest of upcoming events at 9:00 AM each morning."
             control={<Toggle value={settings.dailySummary} onChange={v => setSettings({ dailySummary: v })} />} />
+          <Row label="Sound" desc="Play the system notification sound."
+            control={<Toggle value={settings.notificationSound} onChange={v => setSettings({ notificationSound: v })} />} />
+          <Row label="Test"
+            desc="Fire one right now to confirm notifications are working on your Mac."
+            control={
+              <div className="flex gap-2">
+                <Btn size="sm" onClick={() => {
+                  window.downer?.showNotification({
+                    title: 'Downer is set up',
+                    body: 'Notifications are working — you\'ll get a reminder when events are coming up.',
+                    silent: !settings.notificationSound,
+                  });
+                }}>Send test</Btn>
+                <Btn size="sm" onClick={() => resetNotificationHistory()}>Reset history</Btn>
+              </div>
+            } />
         </Section>
 
+        {/* ── WINDOW SIZE ─────────────────────────────────────────── */}
         <Section title="Window size" desc="Resize the main Downer window. Drag the corner anytime to fine-tune.">
           <Row label="Preset"
             control={
@@ -126,30 +170,146 @@ export function SettingsView() {
           )}
         </Section>
 
-        <Section title="Widgets & desktop" desc="Floating, always-on-top countdowns.">
-          <Row label="Always on top" desc="Pin widgets above other apps."
-            control={<Toggle value={settings.alwaysOnTop} onChange={v => setSettings({ alwaysOnTop: v })} />} />
-          <Row label="Show in menu bar" desc="Quick access from the system tray."
+        {/* ── WIDGETS ─────────────────────────────────────────────── */}
+        <Section title="Widgets & desktop" desc="Floating countdowns that live across all Spaces.">
+          <Row label="Default mode for new widgets"
+            desc="Float pins above all windows. On desktop sits at normal level."
+            control={<Seg
+              value={settings.alwaysOnTop ? 'float' : 'desktop'}
+              onChange={v => setSettings({ alwaysOnTop: v === 'float' })}
+              options={[{ v: 'desktop', l: 'On desktop' }, { v: 'float', l: 'Float above' }]}
+            />} />
+          <Row label="Show in menu bar" desc="Quick access to upcoming events from the system tray."
             control={<Toggle value={settings.menuBar} onChange={v => setSettings({ menuBar: v })} />} />
-          <Row label="Launch at login"
-            control={<Toggle value={settings.launchAtLogin} onChange={v => setSettings({ launchAtLogin: v })} />} />
+          <Row label="Launch at login" desc="Open Downer automatically when you log into your Mac."
+            control={<Toggle value={settings.launchAtLogin} onChange={v => {
+              setSettings({ launchAtLogin: v });
+              window.downer?.setLaunchAtLogin(v);
+            }} />} />
         </Section>
 
-        <Section title="About">
-          <div className="flex items-center justify-between gap-3.5 py-2">
-            <div className="flex items-center gap-3.5">
-              <BrandMark size={44} accent={settings.accent} />
-              <div>
-                <div className="text-[13px] font-semibold text-fg">Downer</div>
-                <div className="text-[11.5px] text-fg-sub">Version {APP_VERSION} · macOS 11+</div>
-              </div>
+        {/* ── DATA ───────────────────────────────────────────────── */}
+        <DataSection />
+
+        {/* ── KEYBOARD SHORTCUTS ────────────────────────────────── */}
+        <Section title="Keyboard shortcuts" desc="Common actions, faster.">
+          {[
+            { keys: '⌘ N',          label: 'New event' },
+            { keys: '⌘ ,',          label: 'Open Settings' },
+            { keys: '⌘ W',          label: 'Close current view (back to dashboard)' },
+            { keys: '⌘ F',          label: 'Search countdowns' },
+            { keys: '⌘ ⇧ D',        label: 'Toggle dark mode' },
+          ].map(s => (
+            <div key={s.label}
+              className="flex items-center justify-between py-2.5 border-b-[0.5px] border-fg/10 last:border-b-0">
+              <span className="text-[12.5px] text-fg">{s.label}</span>
+              <kbd className="font-mono text-[11px] px-2 py-0.5 rounded bg-hover text-fg-mid">{s.keys}</kbd>
             </div>
-            <UpdateButton />
+          ))}
+        </Section>
+
+        {/* ── ABOUT ─────────────────────────────────────────────── */}
+        <Section title="About">
+          <div className="flex items-center gap-3.5 py-2">
+            <BrandMark size={44} accent={settings.accent} />
+            <div>
+              <div className="text-[13px] font-semibold text-fg">Downer</div>
+              <div className="text-[11.5px] text-fg-sub">Version {APP_VERSION} · macOS 11+</div>
+            </div>
           </div>
         </Section>
       </div>
     </div>
   );
+}
+
+// ── DATA SECTION (export / import / reset) ───────────────────────────────────
+
+function DataSection() {
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const exportData = () => {
+    const data = localStorage.getItem('downer-state');
+    if (!data) return;
+    const stamp = new Date().toISOString().slice(0, 10);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `downer-backup-${stamp}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importData = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result));
+        // Validate it looks like a Downer backup before clobbering state.
+        if (!parsed.state || !Array.isArray(parsed.state.events)) {
+          throw new Error('Not a Downer backup file.');
+        }
+        localStorage.setItem('downer-state', String(reader.result));
+        setImportMsg('Imported. Reloading…');
+        setTimeout(() => location.reload(), 800);
+      } catch (e) {
+        setImportMsg(`Import failed: ${e instanceof Error ? e.message : 'Bad file'}`);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const reset = () => {
+    if (resetting) {
+      localStorage.removeItem('downer-state');
+      localStorage.removeItem('downer-fired-notifications');
+      localStorage.removeItem('downer-last-daily-summary');
+      location.reload();
+    } else {
+      setResetting(true);
+      setTimeout(() => setResetting(false), 5000);
+    }
+  };
+
+  return (
+    <Section title="Your data" desc="Everything is stored locally on your Mac. No cloud, no telemetry.">
+      <Row label="Export backup"
+        desc="Download a JSON file with all your events, categories, widgets and settings."
+        control={<Btn size="sm" onClick={exportData} icon="archive">Export…</Btn>} />
+      <Row label="Import backup"
+        desc="Restore from a previous export. Replaces all current data."
+        control={
+          <div className="flex flex-col items-end gap-1">
+            <input
+              ref={fileInput}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={e => e.target.files?.[0] && importData(e.target.files[0])}
+            />
+            <Btn size="sm" onClick={() => fileInput.current?.click()}>Choose file…</Btn>
+            {importMsg && <span className="text-[11px] text-fg-sub">{importMsg}</span>}
+          </div>
+        } />
+      <Row label="Reset all data"
+        desc="Delete every event, category, widget, and setting. Cannot be undone."
+        control={<Btn size="sm" danger onClick={reset} icon="trash">
+          {resetting ? 'Click again to confirm' : 'Reset…'}
+        </Btn>} />
+    </Section>
+  );
+}
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+function dateFormatExample(f: 'us' | 'eu' | 'iso'): string {
+  const sample = new Date(2026, 3, 30); // Apr 30 2026
+  if (f === 'iso') return 'e.g. 2026-04-30';
+  if (f === 'eu') return 'e.g. ' + sample.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  return 'e.g. ' + sample.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function Section({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
@@ -170,57 +330,6 @@ function Row({ label, desc, control }: { label: string; desc?: string; control: 
         {desc && <div className="text-[11.5px] text-fg-sub mt-0.5">{desc}</div>}
       </div>
       {control}
-    </div>
-  );
-}
-
-type UpdateState = 'idle' | 'checking' | 'up-to-date' | 'available' | 'downloading' | 'ready' | 'error';
-
-function UpdateButton() {
-  const [state, setState] = useState<UpdateState>('idle');
-  const [progress, setProgress] = useState(0);
-  const [msg, setMsg] = useState('');
-
-  useEffect(() => {
-    window.downer?.onUpdateAvailable((info) => {
-      setState('available');
-      setMsg(`v${info.version} is ready to download`);
-    });
-    window.downer?.onUpdateUpToDate(() => setState('up-to-date'));
-    window.downer?.onUpdateProgress((pct) => { setState('downloading'); setProgress(pct); });
-    window.downer?.onUpdateDownloaded(() => setState('ready'));
-    window.downer?.onUpdaterError((m) => { setState('error'); setMsg(m); });
-  }, []);
-
-  const label = {
-    idle: 'Check for updates',
-    checking: 'Checking…',
-    'up-to-date': 'Up to date ✓',
-    available: 'Download update',
-    downloading: `Downloading ${progress}%`,
-    ready: 'Restart to update',
-    error: 'Retry',
-  }[state];
-
-  const handleClick = async () => {
-    if (state === 'idle' || state === 'up-to-date' || state === 'error') {
-      setState('checking');
-      const r = await window.downer?.checkForUpdates();
-      if (r?.status === 'dev') { setState('up-to-date'); }
-    } else if (state === 'available') {
-      window.downer?.downloadUpdate();
-    } else if (state === 'ready') {
-      window.downer?.installUpdate();
-    }
-  };
-
-  return (
-    <div className="flex flex-col items-end gap-1">
-      <Btn size="sm" onClick={handleClick}
-        disabled={state === 'checking' || state === 'downloading'}>
-        {label}
-      </Btn>
-      {msg && <div className="text-[10.5px] text-fg-sub max-w-[180px] text-right truncate">{msg}</div>}
     </div>
   );
 }

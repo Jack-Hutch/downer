@@ -50,11 +50,15 @@ const DEFAULT_SETTINGS: Settings = {
   notify: true,
   reminderWindow: '1d',
   dailySummary: false,
+  notificationSound: true,
   alwaysOnTop: true,
   menuBar: true,
   launchAtLogin: false,
   windowSize: 'medium',
   customWindowSize: { width: 1280, height: 820 },
+  dateFormat: 'us',
+  timeFormat: '12h',
+  weekStart: 'sun',
 };
 
 interface State {

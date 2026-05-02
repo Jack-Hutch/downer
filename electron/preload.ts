@@ -10,6 +10,12 @@ contextBridge.exposeInMainWorld('downer', {
   setWindowSize: (payload: { width: number; height: number }) =>
     ipcRenderer.invoke('window:setSize', payload),
 
+  setLaunchAtLogin: (enabled: boolean) =>
+    ipcRenderer.invoke('app:setLaunchAtLogin', enabled),
+
+  showNotification: (payload: { title: string; body: string; silent?: boolean }) =>
+    ipcRenderer.invoke('app:showNotification', payload),
+
   broadcastStore: (snapshot: unknown) => ipcRenderer.send('store:broadcast', snapshot),
   onStoreSnapshot: (cb: (snapshot: any) => void) => {
     ipcRenderer.on('store:snapshot', (_e, s) => cb(s));

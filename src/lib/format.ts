@@ -1,8 +1,35 @@
-export const fmtDate = (d: Date) =>
-  d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+// Cached settings used by the standalone fmt* functions. Updated at runtime
+// by `applyFormatSettings()` whenever the user changes the relevant prefs.
+let _dateFormat: 'us' | 'eu' | 'iso' = 'us';
+let _timeFormat: '12h' | '24h' = '12h';
 
-export const fmtDateTime = (d: Date) =>
-  `${fmtDate(d)} · ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+export function applyFormatSettings(s: { dateFormat?: 'us' | 'eu' | 'iso'; timeFormat?: '12h' | '24h' }) {
+  if (s.dateFormat) _dateFormat = s.dateFormat;
+  if (s.timeFormat) _timeFormat = s.timeFormat;
+}
+
+export const fmtDate = (d: Date) => {
+  switch (_dateFormat) {
+    case 'iso':
+      // 2026-04-30
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    case 'eu':
+      // Wed 30 Apr 2026
+      return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    default:
+      // Wed, Apr 30, 2026
+      return d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  }
+};
+
+export const fmtTime = (d: Date) =>
+  d.toLocaleTimeString(_timeFormat === '24h' ? 'en-GB' : 'en-US', {
+    hour: _timeFormat === '24h' ? '2-digit' : 'numeric',
+    minute: '2-digit',
+    hour12: _timeFormat === '12h',
+  });
+
+export const fmtDateTime = (d: Date) => `${fmtDate(d)} · ${fmtTime(d)}`;
 
 export const fmtRelative = (d: Date) => {
   const ms = d.getTime() - Date.now();

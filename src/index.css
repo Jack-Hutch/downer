@@ -41,6 +41,16 @@ button { font-family: inherit; }
 @keyframes flipTop { from { transform: rotateX(0); } to { transform: rotateX(-90deg); } }
 @keyframes flipBot { from { transform: rotateX(90deg); } to { transform: rotateX(0); } }
 
+/* When the user disables animations in Settings, kill all transitions and
+   keyframes app-wide. Countdown ticking still updates because it's driven by
+   React state, not CSS animation — only the visual easing disappears. */
+.no-animations *,
+.no-animations *::before,
+.no-animations *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
 input[type="date"], input[type="time"] {
   font-family: inherit;
   color: inherit;

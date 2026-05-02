@@ -44,11 +44,15 @@ export interface Settings {
   notify: boolean;
   reminderWindow: '1h' | '1d' | '1w';
   dailySummary: boolean;
+  notificationSound: boolean;
   alwaysOnTop: boolean;
   menuBar: boolean;
   launchAtLogin: boolean;
   windowSize: 'small' | 'medium' | 'large' | 'custom';
   customWindowSize: { width: number; height: number };
+  dateFormat: 'us' | 'eu' | 'iso';
+  timeFormat: '12h' | '24h';
+  weekStart: 'sun' | 'mon';
 }
 
 export const WINDOW_PRESETS = {
@@ -76,6 +80,8 @@ declare global {
       closeWidget: (id: string) => Promise<void>;
       updateWidget: (id: string, payload: { size?: WidgetSize; mode?: WidgetMode }) => Promise<void>;
       setWindowSize: (payload: { width: number; height: number }) => Promise<void>;
+      setLaunchAtLogin: (enabled: boolean) => Promise<void>;
+      showNotification: (payload: { title: string; body: string; silent?: boolean }) => Promise<void>;
       broadcastStore: (snapshot: unknown) => void;
       onStoreSnapshot: (cb: (s: any) => void) => void;
       notifyWidgetReady: () => void;

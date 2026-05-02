@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { pad } from '../lib/format';
+import { useStore } from '../store/store';
 import type { CountdownStyle } from '../types';
 
 const MONO = '"SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace';
@@ -48,6 +49,10 @@ export function CDLargeNumber({ target, accent = '#29261b', dark = false, size =
 
 export function CDDigital({ target, dark = false, size = 1 }: BaseProps) {
   const { days, hours, mins, secs } = useCountdown(target);
+  // Settings flags from the store. Optional chaining handles widget windows
+  // where the store hook may resolve before the snapshot populates.
+  const showSeconds = useStore.getState?.()?.settings?.showSeconds ?? true;
+  const daysOnly = useStore.getState?.()?.settings?.daysOnly ?? false;
   const fg = dark ? 'rgba(255,255,255,0.95)' : 'rgba(20,18,15,0.95)';
   const sub = dark ? 'rgba(255,255,255,0.4)' : 'rgba(20,18,15,0.4)';
   const sep = dark ? 'rgba(255,255,255,0.2)' : 'rgba(20,18,15,0.18)';
@@ -63,15 +68,28 @@ export function CDDigital({ target, dark = false, size = 1 }: BaseProps) {
       }}>{l}</div>
     </div>
   );
+  // Show-seconds + days-only let the user dial down the clock from full
+  // DD:HH:MM:SS to just days. Days-only wins if both are set.
+  const Sep = () => (
+    <span style={{ fontSize: 44 * size, color: sep, fontFamily: MONO, fontWeight: 200, lineHeight: 1, paddingTop: 4 * size }}>:</span>
+  );
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 14 * size }}>
       <Cell v={days} l="Days" />
-      <span style={{ fontSize: 44 * size, color: sep, fontFamily: MONO, fontWeight: 200, lineHeight: 1, paddingTop: 4 * size }}>:</span>
-      <Cell v={hours} l="Hrs" />
-      <span style={{ fontSize: 44 * size, color: sep, fontFamily: MONO, fontWeight: 200, lineHeight: 1, paddingTop: 4 * size }}>:</span>
-      <Cell v={mins} l="Min" />
-      <span style={{ fontSize: 44 * size, color: sep, fontFamily: MONO, fontWeight: 200, lineHeight: 1, paddingTop: 4 * size }}>:</span>
-      <Cell v={secs} l="Sec" />
+      {!daysOnly && (
+        <>
+          <Sep />
+          <Cell v={hours} l="Hrs" />
+          <Sep />
+          <Cell v={mins} l="Min" />
+          {showSeconds && (
+            <>
+              <Sep />
+              <Cell v={secs} l="Sec" />
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }

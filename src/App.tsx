@@ -8,21 +8,33 @@ import { SettingsView } from './views/SettingsView';
 import { CategoriesView } from './views/CategoriesView';
 import { WidgetsView } from './views/WidgetsView';
 import { WINDOW_PRESETS } from './types';
+import { applyFormatSettings } from './lib/format';
+import { useNotificationScheduler } from './lib/notifications';
 
 export default function App() {
   const { view, settings } = useStore();
 
-  // Apply dark mode + font + accent at root
+  // Apply dark mode + font + accent + animations toggle at root
   useEffect(() => {
     const dark = settings.theme === 'dark'
       || (settings.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.classList.toggle('dark', dark);
+    document.documentElement.classList.toggle('no-animations', !settings.animations);
     const fontMap = {
       sans: 'var(--font-sans)', serif: 'var(--font-serif)', mono: 'var(--font-mono)',
     };
     document.documentElement.style.setProperty('font-family', fontMap[settings.font] || fontMap.sans);
     document.documentElement.style.setProperty('--accent', settings.accent);
-  }, [settings.theme, settings.font, settings.accent]);
+  }, [settings.theme, settings.font, settings.accent, settings.animations]);
+
+  // Push date/time format prefs into the standalone fmt helpers.
+  useEffect(() => {
+    applyFormatSettings({ dateFormat: settings.dateFormat, timeFormat: settings.timeFormat });
+  }, [settings.dateFormat, settings.timeFormat]);
+
+  // Run the notification scheduler — fires native notifications at the user's
+  // chosen reminder window, optional daily summary at 9am.
+  useNotificationScheduler();
 
   // Broadcast store snapshot to widget windows whenever it changes
   useEffect(() => {

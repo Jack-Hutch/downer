@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, Tray, Menu, Notification, nativeImage, screen } from 'electron';
 import * as path from 'path';
 import { autoUpdater } from 'electron-updater';
 
@@ -232,6 +232,27 @@ ipcMain.handle('window:setSize', (_e, payload: { width: number; height: number }
   const h = Math.max(600, Math.min(2400, Math.round(payload.height)));
   mainWindow.setSize(w, h, true /* animate */);
   mainWindow.center();
+});
+
+// Toggle whether Downer launches automatically at login.
+ipcMain.handle('app:setLaunchAtLogin', (_e, enabled: boolean) => {
+  app.setLoginItemSettings({ openAtLogin: enabled, openAsHidden: false });
+});
+
+// Fire a native macOS notification. Uses Electron's Notification API which
+// surfaces as a real Notification Center entry, not a renderer-only banner.
+ipcMain.handle('app:showNotification', (_e, payload: { title: string; body: string; silent?: boolean }) => {
+  if (!Notification.isSupported()) return;
+  const n = new Notification({
+    title: payload.title,
+    body: payload.body,
+    silent: !!payload.silent,
+  });
+  n.on('click', () => {
+    mainWindow?.show();
+    mainWindow?.focus();
+  });
+  n.show();
 });
 
 ipcMain.handle('widget:update', (_e, payload: { eventId: string; size?: 'small'|'medium'|'large'; mode?: WidgetMode }) => {
